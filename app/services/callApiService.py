@@ -28,7 +28,7 @@ def callCoinGeckoListeCrypto():
     response = requests.get(url, headers=headers)
     return response.text
 
-def getHistorique(days: int = 5,coin:str ="bitcoin"):
+def getHistorique(days: int = 30,coin:str ="bitcoin"):
     
     url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
     
@@ -69,3 +69,22 @@ def getSimpleGeckoApi():
     #transform the result to json
     retour = json.loads(response.text)
     return retour
+
+def getHistoriqueOneMonthAgo(self,coin:str ="bitcoin"):
+    url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
+    
+    params = {
+        "vs_currency": "eur",
+        "days": "90",
+        "interval": "daily"
+    }
+    headers = {
+        "accept": "application/json",
+        "x-cg-demo-api-key": "CG-uviXoVTxQUerBoCeZfuJ6c5y"
+    }
+    session = requests.Session()
+    request = requests.Request('GET', url, headers=headers, params=params)
+    prepared_request = session.prepare_request(request)
+
+    response = session.send(prepared_request)
+    return response.text
