@@ -43,9 +43,7 @@ def getSimpleListe():
     return getSimpleGeckoApi()
 
 @cryptorouter.get("/VolatiliteOneCripto")
-def getVolatiliteOneCrypto():
-    coin = "ethereum" 
-    days = 90
+def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
     historique = getHistorique(coin = coin,days = days)
     
     historique_data = json.loads(historique)
@@ -54,18 +52,7 @@ def getVolatiliteOneCrypto():
     prices = historique_data.get("prices", [])
     # Extract only the second value in each list
     prices = [price[1] for price in prices]
-    
-    
-    
-    #calcul volatilite
-    # volatilite = calculService.calculVolatilliteJournaliere(days, prices)
-    
-    # #enlever la derniere element de prices
-    # pricesJ2 = prices[:-1]
-    # volatiliteJ2 = calculService.calculVolatilliteJournaliere(days, pricesJ2)
-    
-    
-    
+
     # liste volatilite
     listevolatilite = calculService.getListeVolatilite(days, prices)
     
