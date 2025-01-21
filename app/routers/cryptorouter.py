@@ -3,14 +3,19 @@ import math
 from fastapi import APIRouter
 from app.services.callApiService import callCoinGeckoListeCrypto,getHistorique,getSimpleGeckoApi
 from app.services.calculService import CalculService
+from app.services.coinGeckoService import CoinGeckoService
 
 cryptorouter  = APIRouter()
 calculService = CalculService()
-
+coinGeckoService = CoinGeckoService()
 @cryptorouter.get("/listeCrypto")
 def getListe():
-    return callCoinGeckoListeCrypto()
+    
+    listeCoin = callCoinGeckoListeCrypto()
 
+    retour = coinGeckoService.excludeStableCoin(listeCoin)
+    
+    return retour
 @cryptorouter.get("/volatilite")
 def getHistoriques():
     #testonBitcoin
