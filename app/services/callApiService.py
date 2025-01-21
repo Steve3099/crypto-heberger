@@ -17,16 +17,21 @@ def callApi(self, url: str, method: str, headers: dict, body: dict):
         print(e)
         return None
     
-def callCoinGeckoListeCrypto():
-    url = "https://api.coingecko.com/api/v3/coins/list"
+def callCoinGeckoListeCrypto(ids = ''):
+    url = "https://api.coingecko.com/api/v3/coins/markets"
 
+    params = {
+        "vs_currency": "eur",
+        "ids": ids
+    }
     headers = {
         "accept": "application/json",
         "x-cg-demo-api-key": "CG-uviXoVTxQUerBoCeZfuJ6c5y"
     }
 
-    response = requests.get(url, headers=headers)
-    return response.text
+    response = requests.get(url, headers=headers,params=params)
+    retour = json.loads(response.text)
+    return retour
 
 def getHistorique(days: int = 30,coin:str ="bitcoin"):
     

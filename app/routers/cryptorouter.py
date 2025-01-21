@@ -3,13 +3,16 @@ import math
 from fastapi import APIRouter
 from app.services.callApiService import callCoinGeckoListeCrypto,getHistorique,getSimpleGeckoApi
 from app.services.calculService import CalculService
+from app.services.coinGeckoService import CoinGeckoService
 
 cryptorouter  = APIRouter()
 calculService = CalculService()
-
+coinGeckoService = CoinGeckoService()
 @cryptorouter.get("/listeCrypto")
 def getListe():
-    return callCoinGeckoListeCrypto()
+    listeCoin = callCoinGeckoListeCrypto()
+    retour = coinGeckoService.excludeStableCoin(listeCoin)
+    return retour
 
 @cryptorouter.get("/volatilite")
 def getHistoriques():
@@ -63,8 +66,12 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
     volatiliteMois = listevolatilite[59]
     variationMois = (listevolatilite[59] - listevolatilite[29]) / listevolatilite[29]
     
+    # get rank
+    detailCrypto = callCoinGeckoListeCrypto(coin)
+    ranking = detailCrypto[0].get("market_cap_rank", 0)
     retour = {
         "id":coin,
+        "rank":ranking,
         "volatiliteAnnuel" : volatiliteJ * math.sqrt(365),
         "volatiliteJournaliere": volatiliteJ,
         "volatiliteJ1": volatiliteJ2,
@@ -76,7 +83,11 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
     
     return retour
     
-    
+@cryptorouter.get("/listeCryptoVolatilite")    
+def getListeCryptoAvecVolatiluite():
+    listeCrypto = getListe()
+    listeVolatilite = calculService.top5volatiliteJournaliere(listeCrypto)
+    return listeVolatilite
     
     
     
