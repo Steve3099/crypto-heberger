@@ -1,5 +1,8 @@
 #class cacluclService
+import json
 import math
+
+from app.services.callApiService import getHistorique
 
 
 class CalculService:
@@ -36,5 +39,29 @@ class CalculService:
             indice += 1    
         return listeVolatilite
         
-        
-        
+    
+    def top5volatiliteJournaliere(self,listeCrypto):
+        listeVolatilite= []
+        i = 0;
+        for el in listeCrypto:
+            if i < 10:
+                # print(el.get("id",''))
+                
+                historique = getHistorique(coin = el.get("id",''))
+                # print(len(historique))
+                historique_data = json.loads(historique)
+                # Extract prices
+                prices = historique_data.get("prices", [])
+                #calcul volatilite
+                prices = [price[1] for price in prices]
+                volatilite = self.calculVolatilliteJournaliere(5, prices)
+                retour = {
+                    "coin":el,
+                    "volatiliteJournaliere": volatilite,
+                    "volatiliteAnnuel" : volatilite * math.sqrt(365)
+                }
+                listeVolatilite.append(retour)
+                i+=1
+            else:
+                break
+        return listeVolatilite

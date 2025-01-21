@@ -17,11 +17,12 @@ def callApi(self, url: str, method: str, headers: dict, body: dict):
         print(e)
         return None
     
-def callCoinGeckoListeCrypto():
+def callCoinGeckoListeCrypto(ids = ''):
     url = "https://api.coingecko.com/api/v3/coins/markets"
 
     params = {
         "vs_currency": "eur",
+        "ids": ids
     }
     headers = {
         "accept": "application/json",
