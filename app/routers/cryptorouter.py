@@ -4,10 +4,12 @@ from fastapi import APIRouter
 from app.services.callApiService import callCoinGeckoListeCrypto,getHistorique,getSimpleGeckoApi
 from app.services.calculService import CalculService
 from app.services.coinGeckoService import CoinGeckoService
+from app.services.callCoinMarketApi import CallCoinMarketApi
 
 cryptorouter  = APIRouter()
 calculService = CalculService()
 coinGeckoService = CoinGeckoService()
+callCoinMArketApi = CallCoinMarketApi()
 @cryptorouter.get("/listeCrypto")
 def getListe():
     listeCoin = callCoinGeckoListeCrypto()
@@ -82,9 +84,19 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
     }
     
     return retour
+
+@cryptorouter.get("/fearAndGreed") 
+def getFearAndGreed():
+    try:
+        fearGred = callCoinMArketApi.getFearAndGreed()
+        return fearGred
+    except Exception as e:
+        return str(e)
+    # fearGred = callCoinMArketApi.getFearAndGreed()
+    # return fearGred
     
 @cryptorouter.get("/listeCryptoVolatilite")    
-def getListeCryptoAvecVolatiluite():
+def getListeCryptoAvecVolatilite():
     listeCrypto = getListe()
     listeVolatilite = calculService.top5volatiliteJournaliere(listeCrypto)
     return listeVolatilite
