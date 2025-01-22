@@ -102,10 +102,16 @@ def getListeCryptoAvecVolatilite():
     return listeVolatilite
     
 
-@cryptorouter.get("/top5Volatilite") 
+@cryptorouter.get("/top10Volatilite") 
 def getTop10VolatiliteJournaliere():
     listeCrypto = getListe()
     retour = calculService.top10volatiliteJournaliere(listeCrypto)
     
     return retour
     
+@cryptorouter.get("/top5Bot5") 
+def getTop5Corissance():
+    listeCrypto = getListe()
+    retour = calculService.top5CroissanceDevroissance(listeCrypto)
+    
+    return retour

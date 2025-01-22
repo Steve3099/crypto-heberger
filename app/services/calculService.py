@@ -72,3 +72,15 @@ class CalculService:
         
         
         return listeVolatilite
+    
+    
+    def top5CroissanceDevroissance(self,listeCrypto):
+        # sort list desc by price_change_24h
+        
+        listeCrypto.sort(key=lambda x: x.get("price_change_percentage_24h",0),reverse=True)
+        retour = {
+            "top5Croissance": listeCrypto[:5],
+            "top5Decroissance": listeCrypto[-5:]
+        }
+        
+        return retour
