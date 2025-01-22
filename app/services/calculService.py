@@ -40,7 +40,7 @@ class CalculService:
         return listeVolatilite
         
     
-    def top5volatiliteJournaliere(self,listeCrypto):
+    def top10volatiliteJournaliere(self,listeCrypto):
         listeVolatilite= []
         i = 0;
         for el in listeCrypto:
@@ -64,4 +64,11 @@ class CalculService:
                 i+=1
             else:
                 break
+            
+        # sort list desc by volatilite
+        
+        listeVolatilite.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
+        
+        
+        
         return listeVolatilite
