@@ -15,15 +15,16 @@ class CalculService:
         # parcouriri la liste par le derniere indice et ignorer la derniere indice
         sommeRendemen = 0
         for i in range(0,len(listePrix)-1):
-            sommeRendemen += self.calculRendements(listePrix[i+1],listePrix[i])
+            sommeRendemen += self.calculRendements(listePrix[i],listePrix[i+1])
         
-        moyenneRendemen = sommeRendemen / populationTotale
+        # moyenneRendemen = sommeRendemen / populationTotale
         
         somme = 0
         for i in range(0,len(listePrix)-1):
-            somme+= math.pow(self.calculRendements(listePrix[i+1],listePrix[i]) - moyenneRendemen,2)
+            somme+= math.pow(self.calculRendements(listePrix[i],listePrix[i+1]) - sommeRendemen,2)
             
-        volatiliteJournaliere = math.sqrt(populationTotale*somme)
+        volatiliteJournaliere = math.sqrt(somme/populationTotale)
+        
         
         return volatiliteJournaliere
     
