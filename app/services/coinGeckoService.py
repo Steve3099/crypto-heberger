@@ -10,9 +10,9 @@ class CoinGeckoService:
                 continue
             
             # Exclude assets with minimal price change (e.g., ±1% in 24h)
-            price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
-            if abs(price_change_percentage_24h) < 1:
-                continue
+            # price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
+            # if abs(price_change_percentage_24h) < 1:
+            #     continue
             
             # Add non-stablecoins to the result list
             listeRetour.append(el)
