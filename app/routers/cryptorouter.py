@@ -120,9 +120,10 @@ def getTop5Corissance():
 def getListeCryptoAvecPoids():
     listeCrypto = getListe()
     return coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-
-@cryptorouter.get("/GraphWeights")  
-def getGraphPoids():
-    listeCrypto = getListeCryptoAvecPoids()
-    return coinGeckoService.getGraphWeight(listeCrypto)
     
+@cryptorouter.get("/VolatiliteGenerale")  
+def getvaltilitePortefeuille():
+    listeCrypto = getListe()
+    listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    listeVolatilite = calculService.matriceCovariances(90, listeCrypto = listeCryptowithWeight)
+    return listeVolatilite
