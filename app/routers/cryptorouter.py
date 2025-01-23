@@ -121,3 +121,9 @@ def getListeCryptoAvecPoids():
     listeCrypto = getListe()
     return coinGeckoService.getListeCryptoWithWeight(listeCrypto)
     
+@cryptorouter.get("/VolatiliteGenerale")  
+def getvaltilitePortefeuille():
+    listeCrypto = getListe()
+    listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    listeVolatilite = calculService.matriceCovariances(90, listeCrypto = listeCryptowithWeight)
+    return listeVolatilite

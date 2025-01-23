@@ -30,10 +30,6 @@ class CoinGeckoService:
         for el in listeCrypto:
             weight = (int(el.get("current_price","")) * int(el.get("circulating_supply",""))) / somme
             el["weight"] = round(weight,2)
-            # retour = {
-            #     "coin":el,
-            #     "weight": round(weight,2),
-            # }
             listeRetour.append(el)
             
         return listeRetour
