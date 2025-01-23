@@ -84,14 +84,16 @@ class CalculService:
         
         return retour
     
-    def matriceCovariances(self,nombrejour = 90 , listeCrypto = []):
+    def matriceCovariances(self, listeCrypto = []):
         listeRetour = []
         i = 0;
         for el in listeCrypto:
             # a changer
             if i < 10:
-                historique = getHistorique(coin = el.get("id",''))
+                historique = getHistorique(days = 90,coin = el.get("id",''))
+                
                 historique_data = json.loads(historique)
+                
                 # Extract prices
                 prices = historique_data.get("prices", [])
                 #calcul volatilite
@@ -101,16 +103,18 @@ class CalculService:
                 i+=1
             else:
                 break
+            
+        return listeRetour
+    def getvolatilitePortefeuil(self,nombrejour,listeCrypto,listePrix):
         # calcul matrice de covariances
-        matrice = []
         sommeTotale = 0
-        for i in range(0,len(listeRetour)):
-            volatiliteI = self.getListeVolatilite(nombrejour,listeRetour[i])
+        for i in range(0,len(listePrix)):
+            volatiliteI = self.getListeVolatilite(nombrejour,listePrix[i])
             wheightI = listeCrypto[i].get("weight",0)
             sommeI = 0
-            for j in range(0,len(listeRetour)):
+            for j in range(0,len(listePrix)):
                 
-                volatiliteJ = self.getListeVolatilite(nombrejour,listeRetour[j])
+                volatiliteJ = self.getListeVolatilite(nombrejour,listePrix[j])
                 wheightJ = listeCrypto[j].get("weight",0)
                 produit =0
                 for k in range(0,len(volatiliteJ)):
@@ -123,3 +127,29 @@ class CalculService:
                 # matrice.append(result)
                 
         return volatilitePortefeuil
+    
+    def getHistoriqueVolatiliteGenerale(self,nombrejour,listeCrypto,listePrix):
+        
+        listVolatilitePortefeuille = []
+        for i in range(0,nombrejour-2):
+            if len(listePrix[0]) >= 3:
+                res = self.getvolatilitePortefeuil(nombrejour-i,listeCrypto,listePrix)
+                listVolatilitePortefeuille.append(res)
+                listePrix = self.removeFirstLine(listePrix)
+            # print(len(listePrix))
+        # for i in range(0,l):
+        #     res = self.getvolatilitePortefeuil(nombrejour,listeCrypto,listePrix)
+        #     listVolatilitePortefeuille.append(res)
+        return listVolatilitePortefeuille
+    
+    def removeFirstLine(self,listePrix):
+        listeRetour = []
+        # remove firs line of each element in listeprix
+        for el in listePrix:
+            listeRetour.append(el[1:])
+        
+        return listeRetour
+        # for el in listePrix:
+        #     for i in range(0,len(el)):
+        #         listeRetour.append(el[1:])
+        # return listeRetour
