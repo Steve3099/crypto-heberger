@@ -45,16 +45,20 @@ class CoinGeckoService:
             if el.get("weight") < 0.01:
                 weightOther += el.get("weight")
             else:
-                listeRetourOther.append(el)
+                listeRetourOther.append({ "coin":el.get("name"),"weight":el["weight"]})
         listeRetourOther.append({ "coin":"other","weight":weightOther})
         
         #  arrondier weght to 2 decimal
+        retour = []
         sommeweight =0
+        listeRetour = []
         for el in listeRetourOther:
             el["weight"] = round(Decimal(el.get("weight")),2)
             sommeweight +=el["weight"]
             
+        
         if sommeweight != 1:
+            print(sommeweight)
             listeRetourOther[-1]["weight"] = round(Decimal(listeRetourOther[-1]["weight"]) + 1 - Decimal(sommeweight),2)
             
         return listeRetourOther
