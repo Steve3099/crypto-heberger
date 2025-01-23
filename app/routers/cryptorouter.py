@@ -115,3 +115,9 @@ def getTop5Corissance():
     retour = calculService.top5CroissanceDevroissance(listeCrypto)
     
     return retour
+
+@cryptorouter.get("/weights")  
+def getListeCryptoAvecPoids():
+    listeCrypto = getListe()
+    return coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    
