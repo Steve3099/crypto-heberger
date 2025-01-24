@@ -21,7 +21,7 @@ def callCoinGeckoListeCrypto(ids = ''):
     url = "https://api.coingecko.com/api/v3/coins/markets"
 
     params = {
-        "vs_currency": "eur",
+        "vs_currency": "usd",
         "ids": ids
     }
     headers = {
