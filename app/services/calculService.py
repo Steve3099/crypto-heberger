@@ -113,8 +113,10 @@ class CalculService:
             wheightI = listeCrypto[i].get("weight",0)
             sommeI = 0
             for j in range(0,len(listePrix)):
-                
-                volatiliteJ = self.getListeVolatilite(nombrejour,listePrix[j])
+                if i == j:
+                    volatiliteJ = volatiliteI
+                else:
+                    volatiliteJ = self.getListeVolatilite(nombrejour,listePrix[j])
                 wheightJ = listeCrypto[j].get("weight",0)
                 produit =0
                 for k in range(0,len(volatiliteJ)):
