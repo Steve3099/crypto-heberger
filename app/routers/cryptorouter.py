@@ -130,5 +130,14 @@ def getGraphPoids():
 def getvaltilitePortefeuille():
     listeCrypto = getListe()
     listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-    listeVolatilite = calculService.matriceCovariances(90, listeCrypto = listeCryptowithWeight)
-    return listeVolatilite
+    listePrix = calculService.matriceCovariances(listeCryptowithWeight)
+    
+    # getHistorique volatilite generale 
+    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(90,listeCryptowithWeight,listePrix)
+    # print(historiqueVolatiliteGenerale)
+    retour = {
+        "volatiliteGenerale": historiqueVolatiliteGenerale[0],
+        "historiqueVolatiliteGenerale": historiqueVolatiliteGenerale
+    }
+    
+    return retour
