@@ -11,20 +11,20 @@ calculService = CalculService()
 coinGeckoService = CoinGeckoService()
 callCoinMArketApi = CallCoinMarketApi()
 @cryptorouter.get("/listeCrypto")
-def getListe():
-    listeCoin = callCoinGeckoListeCrypto()
+async def getListe():
+    listeCoin = await callCoinGeckoListeCrypto()
     retour = coinGeckoService.excludeStableCoin(listeCoin)
     retour = retour[:10]
     return retour
 
 @cryptorouter.get("/volatilite")
-def getHistoriques():
+async def getHistoriques():
     #testonBitcoin
     listeCrypto = ["bitcoin","ethereum"]
     listeRetour = []
     for el in listeCrypto:
         
-        historique = getHistorique(coin = el)
+        historique = await getHistorique(coin = el)
         
         historique_data = json.loads(historique)
         
@@ -49,8 +49,8 @@ def getSimpleListe():
     return getSimpleGeckoApi()
 
 @cryptorouter.get("/VolatiliteOneCripto")
-def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
-    historique = getHistorique(coin = coin,days = days)
+async def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
+    historique = await getHistorique(coin = coin,days = days)
     
     historique_data = json.loads(historique)
         
@@ -72,7 +72,7 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
         variationMois = (listevolatilite[-30] - listevolatilite[-31]) / listevolatilite[-31]
         
         # get rank
-        detailCrypto = callCoinGeckoListeCrypto(coin)
+        detailCrypto = await callCoinGeckoListeCrypto(coin)
         ranking = detailCrypto[0].get("market_cap_rank", 0)
         retour = {
             "id":coin,
@@ -84,15 +84,15 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
             "volatiliteMois": volatiliteMois, 
             "variationMois": variationMois,
             "historiquePrice":prices,
-            # "historiquevolatiliteJournaliere": listevolatilite,
+            "historiquevolatiliteJournaliere": listevolatilite,
         }
         
         return retour
 
 @cryptorouter.get("/fearAndGreed") 
-def getFearAndGreed():
+async def getFearAndGreed():
     try:
-        fearGred = callCoinMArketApi.getFearAndGreed()
+        fearGred = await callCoinMArketApi.getFearAndGreed()
         return fearGred
     except Exception as e:
         return str(e)
@@ -120,32 +120,32 @@ def getTop5Corissance():
     
     return retour
 
-@cryptorouter.get("/weights")  
-def getListeCryptoAvecPoids():
-    listeCrypto = getListe()
-    listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-    # add volatilite to each listeWithWeight
+@cryptorouter.get("/weights")
+async def getListeCryptoAvecPoids():
+    listeCrypto = await getListe()  # Assuming this is an async function
+    listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)  # Assuming this is async
+    
+    # Add volatility to each element in listeWithWeight
     for el in listeWithWeight:
-        resultat = getVolatiliteOneCrypto(el["id"])
-        el["volatiliteJournaliere"] = resultat.get("volatiliteJournaliere",0)
-        el['variationj1'] = resultat.get("variationj1")
+        resultat = await getVolatiliteOneCrypto(el["id"])  # Assuming this is async
+        el["volatiliteJournaliere"] = resultat.get("volatiliteJournaliere", 0)
+        el["variationj1"] = resultat.get("variationj1")
         el["volatiliteAnnuel"] = resultat.get("volatiliteAnnuel")
-        
     
     return listeWithWeight
 
 @cryptorouter.get("/GraphWeights")  
-def getGraphPoids():
-    listeCrypto = getListeCryptoAvecPoids()
+async def getGraphPoids():
+    listeCrypto = await getListeCryptoAvecPoids()
     return coinGeckoService.getGraphWeight(listeCrypto)
     
 @cryptorouter.get("/VolatiliteGenerale")  
-def getvaltilitePortefeuille():
+async def getvaltilitePortefeuille():
     # obtenir la liste des crypto
-    listeCrypto = getListe()
+    listeCrypto = await getListe()
     
     listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-    listePrix = calculService.getListePrix(listeCryptowithWeight)
+    listePrix = await calculService.getListePrix(listeCryptowithWeight)
     
     # getHistorique volatilite generale 
     historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(9,listeCryptowithWeight,listePrix)
