@@ -1,4 +1,5 @@
 #class cacluclService
+from decimal import Decimal
 import json
 import math
 
@@ -10,31 +11,30 @@ class CalculService:
         #call function logarythme
         return math.log(prixF/prixAf)
     
-    def calculVolatilliteJournaliere(self,nombrejour,listePrix):
+    def calculVolatilliteJournaliere(self,listePrix):
         populationTotale = len(listePrix)-1
         # parcouriri la liste par le derniere indice et ignorer la derniere indice
         sommeRendemen = 0
-        for i in range(0,len(listePrix)-1):
-            sommeRendemen += self.calculRendements(listePrix[i],listePrix[i+1])
+        for i in range(0,len(listePrix)-2):
+            sommeRendemen += self.calculRendements(listePrix[i+1],listePrix[i])
         
         somme = 0
-        for i in range(0,len(listePrix)-1):
-            somme+= math.pow(self.calculRendements(listePrix[i],listePrix[i+1]) - sommeRendemen,2)
+        for i in range(0,len(listePrix)-2):
+            somme+= math.pow(self.calculRendements(listePrix[i+1],listePrix[i]) - sommeRendemen,2)
             
         volatiliteJournaliere = math.sqrt(somme/populationTotale)
         
-        
         return volatiliteJournaliere
     
-    def getListeVolatilite(self,nombrejour,listePrix):
+    def getListeVolatilite(self,listePrix):
         listeVolatilite = []
         indice = 0
-        for i in range(0,len(listePrix)-2):
+        for i in range(1,len(listePrix)-2):
             if indice == 0:
-                listeVolatilite.append(self.calculVolatilliteJournaliere(nombrejour-indice,listePrix))
+                listeVolatilite.append(self.calculVolatilliteJournaliere(listePrix))
             else:
                 price = listePrix[:-indice]
-                listeVolatilite.append(self.calculVolatilliteJournaliere(nombrejour-indice,price))
+                listeVolatilite.append(self.calculVolatilliteJournaliere(price))
             indice += 1    
         return listeVolatilite
         
@@ -53,7 +53,7 @@ class CalculService:
                 prices = historique_data.get("prices", [])
                 #calcul volatilite
                 prices = [price[1] for price in prices]
-                volatilite = self.calculVolatilliteJournaliere(5, prices)
+                volatilite = self.calculVolatilliteJournaliere(prices)
                 retour = {
                     "coin":el,
                     "volatiliteJournaliere": volatilite,
@@ -84,13 +84,13 @@ class CalculService:
         
         return retour
     
-    def matriceCovariances(self, listeCrypto = []):
+    def getListePrix(self, listeCrypto = []):
         listeRetour = []
         i = 0;
         for el in listeCrypto:
             # a changer
             if i < 10:
-                historique = getHistorique(days = 90,coin = el.get("id",''))
+                historique = getHistorique(days = 9,coin = el.get("id",''))
                 
                 historique_data = json.loads(historique)
                 
@@ -105,25 +105,30 @@ class CalculService:
                 break
             
         return listeRetour
-    def getvolatilitePortefeuil(self,nombrejour,listeCrypto,listePrix):
+    def getvolatilitePortefeuil(self,listeCrypto,listePrix):
         # calcul matrice de covariances
         sommeTotale = 0
+        rows = len(listeCrypto)
+        cols = len(listeCrypto)
+        matrice = [[-1 for _ in range(cols)] for _ in range(rows)]
         for i in range(0,len(listePrix)):
-            volatiliteI = self.getListeVolatilite(nombrejour,listePrix[i])
+            volatiliteI = self.getListeVolatilite(listePrix[i])
             wheightI = listeCrypto[i].get("weight",0)
             sommeI = 0
             for j in range(0,len(listePrix)):
                 if i == j:
                     volatiliteJ = volatiliteI
                 else:
-                    volatiliteJ = self.getListeVolatilite(nombrejour,listePrix[j])
+                    volatiliteJ = self.getListeVolatilite(listePrix[j])
                 wheightJ = listeCrypto[j].get("weight",0)
                 produit =0
                 for k in range(0,len(volatiliteJ)):
                     produit += volatiliteI[k] * volatiliteJ[k]
                 
-                sommeI += (produit / len(volatiliteJ)) * wheightI * wheightJ
-                
+                sommeI += Decimal(produit / len(volatiliteJ)) * wheightI * wheightJ
+                matrice[i][j] = sommeI
+                matrice[j][i] = sommeI
+            # print(matrice[i])
             sommeTotale += sommeI
         volatilitePortefeuil = math.sqrt(sommeTotale)
                 # matrice.append(result)
@@ -135,7 +140,7 @@ class CalculService:
         listVolatilitePortefeuille = []
         for i in range(0,nombrejour-2):
             if len(listePrix[0]) >= 3:
-                res = self.getvolatilitePortefeuil(nombrejour-i,listeCrypto,listePrix)
+                res = self.getvolatilitePortefeuil(listeCrypto,listePrix)
                 listVolatilitePortefeuille.append(res)
                 listePrix = self.removeFirstLine(listePrix)
             # print(len(listePrix))
@@ -151,7 +156,3 @@ class CalculService:
             listeRetour.append(el[1:])
         
         return listeRetour
-        # for el in listePrix:
-        #     for i in range(0,len(el)):
-        #         listeRetour.append(el[1:])
-        # return listeRetour

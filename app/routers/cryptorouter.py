@@ -14,6 +14,7 @@ callCoinMArketApi = CallCoinMarketApi()
 def getListe():
     listeCoin = callCoinGeckoListeCrypto()
     retour = coinGeckoService.excludeStableCoin(listeCoin)
+    retour = retour[:10]
     return retour
 
 @cryptorouter.get("/volatilite")
@@ -59,31 +60,34 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
     prices = [price[1] for price in prices]
 
     # liste volatilite
-    listevolatilite = calculService.getListeVolatilite(days, prices)
+    listevolatilite = calculService.getListeVolatilite( prices)
+    if(len(listevolatilite) >0 ):
+        
     
-    volatiliteJ = listevolatilite[0]
-    volatiliteJ2 = listevolatilite[1]
-    variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
+        volatiliteJ = listevolatilite[-1]
+        volatiliteJ2 = listevolatilite[-2]
+        variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
     
-    volatiliteMois = listevolatilite[59]
-    variationMois = (listevolatilite[59] - listevolatilite[29]) / listevolatilite[29]
-    
-    # get rank
-    detailCrypto = callCoinGeckoListeCrypto(coin)
-    ranking = detailCrypto[0].get("market_cap_rank", 0)
-    retour = {
-        "id":coin,
-        "rank":ranking,
-        "volatiliteAnnuel" : volatiliteJ * math.sqrt(365),
-        "volatiliteJournaliere": volatiliteJ,
-        "volatiliteJ1": volatiliteJ2,
-        "variationj1": variationJ1,
-        "volatiliteMois": volatiliteMois, 
-        "variationMois": variationMois,
-        "historiquevolatiliteJournaliere": listevolatilite,
-    }
-    
-    return retour
+        volatiliteMois = listevolatilite[-30]
+        variationMois = (listevolatilite[-30] - listevolatilite[-31]) / listevolatilite[-31]
+        
+        # get rank
+        detailCrypto = callCoinGeckoListeCrypto(coin)
+        ranking = detailCrypto[0].get("market_cap_rank", 0)
+        retour = {
+            "id":coin,
+            "rank":ranking,
+            "volatiliteAnnuel" : volatiliteJ * math.sqrt(365),
+            "volatiliteJournaliere": volatiliteJ,
+            "volatiliteJ1": volatiliteJ2,
+            "variationj1": variationJ1,
+            "volatiliteMois": volatiliteMois, 
+            "variationMois": variationMois,
+            "historiquePrice":prices,
+            # "historiquevolatiliteJournaliere": listevolatilite,
+        }
+        
+        return retour
 
 @cryptorouter.get("/fearAndGreed") 
 def getFearAndGreed():
@@ -119,7 +123,16 @@ def getTop5Corissance():
 @cryptorouter.get("/weights")  
 def getListeCryptoAvecPoids():
     listeCrypto = getListe()
-    return coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    # add volatilite to each listeWithWeight
+    for el in listeWithWeight:
+        resultat = getVolatiliteOneCrypto(el["id"])
+        el["volatiliteJournaliere"] = resultat.get("volatiliteJournaliere",0)
+        el['variationj1'] = resultat.get("variationj1")
+        el["volatiliteAnnuel"] = resultat.get("volatiliteAnnuel")
+        
+    
+    return listeWithWeight
 
 @cryptorouter.get("/GraphWeights")  
 def getGraphPoids():
@@ -128,16 +141,19 @@ def getGraphPoids():
     
 @cryptorouter.get("/VolatiliteGenerale")  
 def getvaltilitePortefeuille():
+    # obtenir la liste des crypto
     listeCrypto = getListe()
+    
     listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-    listePrix = calculService.matriceCovariances(listeCryptowithWeight)
+    listePrix = calculService.getListePrix(listeCryptowithWeight)
     
     # getHistorique volatilite generale 
-    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(90,listeCryptowithWeight,listePrix)
+    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(9,listeCryptowithWeight,listePrix)
     # print(historiqueVolatiliteGenerale)
     retour = {
-        "volatiliteGenerale": historiqueVolatiliteGenerale[0],
+        "volatiliteGenerale": historiqueVolatiliteGenerale[-1],
         "historiqueVolatiliteGenerale": historiqueVolatiliteGenerale
     }
     
     return retour
+

@@ -1,0 +1,5 @@
+
+/app/services/__pycache__
+*.pyc
+*.pyc
+test.py

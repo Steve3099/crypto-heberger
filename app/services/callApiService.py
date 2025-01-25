@@ -38,7 +38,7 @@ def getHistorique(days: int = 90,coin:str ="bitcoin"):
     url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
     
     params = {
-        "vs_currency": "eur",
+        "vs_currency": "usd",
         "days": str(days),
         "interval": "daily"
     }
