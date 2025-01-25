@@ -21,18 +21,41 @@ class CoinGeckoService:
         
         return listeRetour
     
-    def getListeCryptoWithWeight(self,listeCrypto):
+    def getListeCryptoWithWeight(self, listeCrypto):
+        from decimal import Decimal, getcontext
+
+        # Augmenter la précision des calculs pour réduire les erreurs
+        getcontext().prec = 28  
+
         listeRetour = []
-        somme = 0
+        somme = Decimal(0)
+
+        # Calculer la somme totale de la capitalisation boursière
         for el in listeCrypto:
-            somme += int(el.get("current_price","")) * int(el.get("circulating_supply",""))
-        
+            somme += Decimal(el.get("current_price", "")) * Decimal(el.get("circulating_supply", ""))
+
+        # Calculer les poids bruts sans les arrondir
+        poids_bruts = []
         for el in listeCrypto:
-            weight = (int(el.get("current_price","")) * int(el.get("circulating_supply",""))) / somme
-            el["weight"] = round(weight,2)
+            poids_brut = (Decimal(el.get("current_price", "")) * Decimal(el.get("circulating_supply", ""))) / somme * 100
+            poids_bruts.append(poids_brut)
+            el["weight"] = poids_brut  # Stockage temporaire sans arrondi
             listeRetour.append(el)
-            
+
+        # Calcul de l'erreur cumulée d'arrondi
+        somme_arrondie = Decimal(0)
+        for el in listeRetour:
+            el["weight"] = round(el["weight"], 2)
+            somme_arrondie += el["weight"]
+
+        # Redistribution proportionnelle de l'erreur
+        erreur_totale = Decimal(100) - somme_arrondie
+        sommett = 0
+        for el in listeRetour:
+            el["weight"] += round(el["weight"] / somme_arrondie * erreur_totale, 2)
+            sommett += el["weight"]
         return listeRetour
+
     def getGraphWeight(self,listeCrypto):
         # if wieght < 1% we put all of then in a coin labeed other and add all thier weight together
         weightOther = 0
@@ -45,15 +68,11 @@ class CoinGeckoService:
         listeRetourOther.append({ "coin":"other","weight":weightOther})
         
         #  arrondier weght to 2 decimal
-        retour = []
         sommeweight =0
-        listeRetour = []
         for el in listeRetourOther:
             el["weight"] = round(Decimal(el.get("weight")),2)
             sommeweight +=el["weight"]
-            
-        
-        if sommeweight != 1:
+        if sommeweight != 100.00:
             print(sommeweight)
             listeRetourOther[-1]["weight"] = round(Decimal(listeRetourOther[-1]["weight"]) + 1 - Decimal(sommeweight),2)
             
