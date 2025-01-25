@@ -17,7 +17,7 @@ def callApi(self, url: str, method: str, headers: dict, body: dict):
         print(e)
         return None
     
-async def callCoinGeckoListeCrypto(ids = ''):
+def callCoinGeckoListeCrypto(ids = ''):
     url = "https://api.coingecko.com/api/v3/coins/markets"
 
     params = {
@@ -33,7 +33,7 @@ async def callCoinGeckoListeCrypto(ids = ''):
     retour = json.loads(response.text)
     return retour
 
-async def getHistorique(days: int = 90,coin:str ="bitcoin"):
+def getHistorique(days: int = 90,coin:str ="bitcoin"):
     
     url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
     
