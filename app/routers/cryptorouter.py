@@ -84,7 +84,7 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
             "volatiliteMois": volatiliteMois, 
             "variationMois": variationMois,
             "historiquePrice":prices,
-            # "historiquevolatiliteJournaliere": listevolatilite,
+            "historiquevolatiliteJournaliere": listevolatilite,
         }
         
         return retour
