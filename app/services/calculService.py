@@ -133,14 +133,14 @@ class CalculService:
         volatilitePortefeuil = math.sqrt(sommeTotale)
                 # matrice.append(result)
                 
-        return volatilitePortefeuil
+        return volatilitePortefeuil,matrice
     
     def getHistoriqueVolatiliteGenerale(self,nombrejour,listeCrypto,listePrix):
         
         listVolatilitePortefeuille = []
         for i in range(0,nombrejour-2):
             if len(listePrix[0]) >= 3:
-                res = self.getvolatilitePortefeuil(listeCrypto,listePrix)
+                res,matrice = self.getvolatilitePortefeuil(listeCrypto,listePrix)
                 listVolatilitePortefeuille.append(res)
                 listePrix = self.removeFirstLine(listePrix)
             # print(len(listePrix))

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 class CoinGeckoService:
-    def excludeStableCoin(self, listeCoin):
+    def excludeStableCoin(listeCoin):
         # List of known stablecoin symbols to exclude
         stablecoin_symbols = {"usdt", "usdc", "busd", "dai", "tusd", "ust", "gusd", "pax", "eurs", "frax", "husd"}
         
@@ -11,11 +11,10 @@ class CoinGeckoService:
             if el.get("symbol", "").lower() in stablecoin_symbols:
                 continue
             
-            # Exclude assets with minimal price change (e.g., ±1% in 24h)
-            # price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
-            # if abs(price_change_percentage_24h) < 1:
-            #     continue
-            
+            # Exclude assets with minimal price change (e.g., ±0.01% in 24h)
+            price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
+            if abs(price_change_percentage_24h) < 0.01:
+                continue
             # Add non-stablecoins to the result list
             listeRetour.append(el)
         

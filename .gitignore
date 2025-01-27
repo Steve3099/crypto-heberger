@@ -3,3 +3,4 @@
 *.pyc
 *.pyc
 test.py
+/app/routers/__pycache__
