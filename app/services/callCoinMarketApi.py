@@ -3,7 +3,7 @@ import requests
 
 
 class CallCoinMarketApi():
-    def getFearAndGreed(self):
+    async def getFearAndGreed(self):
         url = "https://pro-api.coinmarketcap.com/v3/fear-and-greed/latest"
         headers = {
             "accept": "application/json",

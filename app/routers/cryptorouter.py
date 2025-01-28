@@ -90,9 +90,9 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
         return retour
 
 @cryptorouter.get("/fearAndGreed") 
-def getFearAndGreed():
+async def getFearAndGreed():
     try:
-        fearGred = callCoinMArketApi.getFearAndGreed()
+        fearGred = await callCoinMArketApi.getFearAndGreed()
         return fearGred
     except Exception as e:
         return str(e)
