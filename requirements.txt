@@ -9,7 +9,7 @@ fastapi==0.103.2
 h11==0.14.0
 idna==3.10
 importlib-metadata==6.7.0
-numpy==1.21.6
+numpy==1.22.0
 pandas==1.1.5
 pydantic==2.5.3
 pydantic_core==2.14.6
