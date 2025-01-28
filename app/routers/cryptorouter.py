@@ -1,5 +1,6 @@
 import json
 import math
+import numpy as np
 from fastapi import APIRouter
 from app.services.callApiService import callCoinGeckoListeCrypto,getHistorique,getSimpleGeckoApi
 from app.services.calculService import CalculService
@@ -49,45 +50,41 @@ def getSimpleListe():
     return getSimpleGeckoApi()
 
 @cryptorouter.get("/VolatiliteOneCripto")
-def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
-    historique = getHistorique(coin = coin,days = days)
+def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int = 90):
     
-    historique_data = json.loads(historique)
-        
-    # Extract prices 
-    prices = historique_data.get("prices", [])
-    # Extract only the second value in each list
-    prices = [price[1] for price in prices]
+    historique = coinGeckoService.get_historical_prices(coin,vs_currency, days)
+    
+    # volatilite journaliere
+    # volatilite = calculService.calculVolatilliteJournaliere(historique)
+    
+    # historique volatilite journlaiere
+    liste_volatilite = calculService.getListeVolatilite(historique)
+    
+    volatiliteJ = liste_volatilite[0]
+    volatiliteJ2 = liste_volatilite[1]
+    variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
 
-    # liste volatilite
-    listevolatilite = calculService.getListeVolatilite( prices)
-    if(len(listevolatilite) >0 ):
-        
+    volatiliteMois = liste_volatilite[30]
+    variationMois = (liste_volatilite[30] - liste_volatilite[60]) / liste_volatilite[60]
     
-        volatiliteJ = listevolatilite[-1]
-        volatiliteJ2 = listevolatilite[-2]
-        variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
+    # get rank
+    detailCrypto = callCoinGeckoListeCrypto(coin)
+    ranking = detailCrypto[0].get("market_cap_rank", 0)
     
-        volatiliteMois = listevolatilite[-30]
-        variationMois = (listevolatilite[-30] - listevolatilite[-31]) / listevolatilite[-31]
-        
-        # get rank
-        detailCrypto = callCoinGeckoListeCrypto(coin)
-        ranking = detailCrypto[0].get("market_cap_rank", 0)
-        retour = {
+    retour = {
             "id":coin,
             "rank":ranking,
-            "volatiliteAnnuel" : volatiliteJ * math.sqrt(365),
+            "volatiliteAnnuel" : volatiliteJ * np.sqrt(365),
             "volatiliteJournaliere": volatiliteJ,
             "volatiliteJ1": volatiliteJ2,
             "variationj1": variationJ1,
             "volatiliteMois": volatiliteMois, 
             "variationMois": variationMois,
-            "historiquePrice":prices,
-            "historiquevolatiliteJournaliere": listevolatilite,
+            # "historiquePrice":historique,
+            "historiquevolatiliteJournaliere": liste_volatilite,
         }
-        
-        return retour
+    
+    return retour
 
 @cryptorouter.get("/fearAndGreed") 
 async def getFearAndGreed():
@@ -146,7 +143,7 @@ def getvaltilitePortefeuille():
     listePrix = calculService.getListePrix(listeCryptowithWeight)
     
     # getHistorique volatilite generale 
-    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(9,listeCryptowithWeight,listePrix)
+    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(90,listeCryptowithWeight,listePrix)
     # print(historiqueVolatiliteGenerale)
     retour = {
         "volatiliteGenerale": historiqueVolatiliteGenerale[-1],
