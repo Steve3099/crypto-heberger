@@ -11,3 +11,7 @@ app/services/__pycache__/callApiService.cpython-37.pyc
 app/services/__pycache__/callCoinMarketApi.cpython-37.pyc
 app/services/__pycache__/coinGeckoService.cpython-37.pyc
 myprogramme.py
+*.pyc
+*.pyc
+*.pyc
+app/services/__pycache__/coinGeckoService.cpython-37.pyc

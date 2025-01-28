@@ -84,13 +84,13 @@ class CalculService:
         
         return retour
     
-    async def getListePrix(self, listeCrypto = []):
+    def getListePrix(self, listeCrypto = []):
         listeRetour = []
         i = 0;
         for el in listeCrypto:
             # a changer
             if i < 10:
-                historique = await getHistorique(days = 9,coin = el.get("id",''))
+                historique = getHistorique(days = 9,coin = el.get("id",''))
                 
                 historique_data = json.loads(historique)
                 
