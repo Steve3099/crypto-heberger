@@ -4,3 +4,4 @@
 *.pyc
 test.py
 /app/routers/__pycache__
+*.csv
