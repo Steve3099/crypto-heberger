@@ -5,3 +5,5 @@ __pycache__/
 test.py
 myprogramme.py
 programe.py
+venv/
+/venv
