@@ -113,12 +113,11 @@ def calculate_statistics(liste_price,liste_crypto,liste_weight):
     for i in range(1, len(liste_price)):
         liste_price[i] = liste_price[i].rename(columns={'price': 'price_' + liste_crypto[i].get("name")})
         merged = pd.merge(merged, liste_price[i], on='date')
-        
     
     # Calculer les rendements journaliers pour les crypto de la liste
     
     for i in range(len(liste_crypto)):
-        merged['log_return_'+liste_crypto[i].get("name")] = np.log(merged['price_'+liste_crypto[i].get("name")] / merged['price_'+liste_crypto[i].get("name")].shift(1))
+        merged[liste_crypto[i].get("name")] = np.log(merged['price_'+liste_crypto[i].get("name")] / merged['price_'+liste_crypto[i].get("name")].shift(1))
     
     # Supprimer les valeurs NaN
     merged.dropna(inplace=True)
@@ -126,11 +125,11 @@ def calculate_statistics(liste_price,liste_crypto,liste_weight):
     # Calcul de la volatilité historique
     liste_volatilite = []
     for i in range(len(liste_crypto)):
-        vol = merged['log_return_'+liste_crypto[i].get("name")].std()
+        vol = merged[liste_crypto[i].get("name")].std()
         liste_volatilite.append(vol)
     
     # Calcul de la covariance entre les cryptos de la liste
-    covariance_matrix = merged[[f'log_return_{crypto.get("name")}' for crypto in liste_crypto]].cov()
+    covariance_matrix = merged[[f'{crypto.get("name")}' for crypto in liste_crypto]].cov()
     
     # Méthode matricielle (plus précise)
     weights = np.array(liste_weight)
@@ -195,6 +194,7 @@ print(f"Volatilité annuelle du portefeuille (matricielle) : {portfolio_volatili
 
 print("\n=== Matrice de Covariance ===")
 print(covariance_matrix)
+
 
 print("\n=== Matrice de Corrélation ===")
 print(correlation_matrix)
