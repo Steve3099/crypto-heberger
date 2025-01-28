@@ -182,3 +182,4 @@ class CalculService:
             else:
                 # ajouter l'erreur au poids le plus fort
                 liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) - Decimal(str(error)))
+        return liste_weight

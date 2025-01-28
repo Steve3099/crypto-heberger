@@ -125,8 +125,7 @@ def getListeCryptoAvecPoids():
         liste_market_cap.append(market_cap)
         
     liste_weight = calculService.normalize_weights(liste_market_cap)
-    
-    # listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    liste_weight = calculService.round_weights(liste_weight)
     # add volatilite to each listeWithWeight
     for i in range(len(listeCrypto)):
         resultat = getVolatiliteOneCrypto(listeCrypto[i]["id"])
