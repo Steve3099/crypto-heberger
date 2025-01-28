@@ -2,7 +2,8 @@
 from decimal import Decimal
 import json
 import math
-
+import pandas as pd
+import numpy as np
 from app.services.callApiService import getHistorique
 
 
@@ -12,24 +13,25 @@ class CalculService:
         return math.log(prixF/prixAf)
     
     def calculVolatilliteJournaliere(self,listePrix):
-        populationTotale = len(listePrix)-1
-        # parcouriri la liste par le derniere indice et ignorer la derniere indice
-        sommeRendemen = 0
-        for i in range(0,len(listePrix)-2):
-            sommeRendemen += self.calculRendements(listePrix[i+1],listePrix[i])
         
-        somme = 0
-        for i in range(0,len(listePrix)-2):
-            somme+= math.pow(self.calculRendements(listePrix[i+1],listePrix[i]) - sommeRendemen,2)
-            
-        volatiliteJournaliere = math.sqrt(somme/populationTotale)
+        # mettre liste prix dans un dataFrame
+        listePrix = pd.DataFrame(listePrix,columns=['date','price'])
         
-        return volatiliteJournaliere
+        # cacul rendement et la somme des rendement
+        listePrix['log_return'] = np.log(listePrix['price'] / listePrix['price'].shift(1))
+        
+        # Supprimer les valeurs NaN
+        listePrix.dropna(inplace=True)
+        
+        # Calcul de la volatilité historique
+        volatilite  = listePrix['log_return'].std()
+        
+        return volatilite
     
     def getListeVolatilite(self,listePrix):
         listeVolatilite = []
         indice = 0
-        for i in range(1,len(listePrix)-2):
+        for i in range(len(listePrix)-2):
             if indice == 0:
                 listeVolatilite.append(self.calculVolatilliteJournaliere(listePrix))
             else:
@@ -90,7 +92,7 @@ class CalculService:
         for el in listeCrypto:
             # a changer
             if i < 10:
-                historique = getHistorique(days = 9,coin = el.get("id",''))
+                historique = getHistorique(days = 90,coin = el.get("id",''))
                 
                 historique_data = json.loads(historique)
                 
@@ -143,10 +145,6 @@ class CalculService:
                 res,matrice = self.getvolatilitePortefeuil(listeCrypto,listePrix)
                 listVolatilitePortefeuille.append(res)
                 listePrix = self.removeFirstLine(listePrix)
-            # print(len(listePrix))
-        # for i in range(0,l):
-        #     res = self.getvolatilitePortefeuil(nombrejour,listeCrypto,listePrix)
-        #     listVolatilitePortefeuille.append(res)
         return listVolatilitePortefeuille
     
     def removeFirstLine(self,listePrix):

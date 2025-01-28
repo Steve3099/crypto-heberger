@@ -3,7 +3,7 @@ import json
 import requests
 import pandas as pd
 
-key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
+key = "CG-pq44GDj1HKecURw2UA1uUYz8"
 
 class CoinGeckoService:
     def get_liste_crypto(self):
@@ -53,7 +53,7 @@ class CoinGeckoService:
         }
         headers = {
             "accept": "application/json",
-            "x-cg-demo-api-key": key
+            "x-cg-demo-api-key": 'CG-pq44GDj1HKecURw2UA1uUYz8'
         }
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
