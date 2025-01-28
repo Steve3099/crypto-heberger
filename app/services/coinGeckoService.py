@@ -6,7 +6,7 @@ import pandas as pd
 key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 
 class CoinGeckoService:
-    def get_liste_crypto():
+    def get_liste_crypto(self):
         url = "https://api.coingecko.com/api/v3/coins/markets"
 
         params = {
@@ -25,7 +25,7 @@ class CoinGeckoService:
             retour.append(df[i])
     
         return retour
-    def excludeStableCoin(listeCoin):
+    def excludeStableCoin(self,listeCoin):
         # List of known stablecoin symbols to exclude
         stablecoin_symbols = {"usdt", "usdc", "busd", "dai", "tusd", "ust", "gusd", "pax", "eurs", "frax", "husd"}
         
