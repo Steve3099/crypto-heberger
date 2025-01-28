@@ -96,8 +96,6 @@ async def getFearAndGreed():
         return fearGred
     except Exception as e:
         return str(e)
-    # fearGred = callCoinMArketApi.getFearAndGreed()
-    # return fearGred
     
 @cryptorouter.get("/listeCryptoVolatilite")    
 def getListeCryptoAvecVolatilite():
