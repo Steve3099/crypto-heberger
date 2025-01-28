@@ -154,3 +154,31 @@ class CalculService:
             listeRetour.append(el[1:])
         
         return listeRetour
+    
+    def normalize_weights(self,liste_crypto_market_cap):
+        total_market_cap = 0
+    
+        for i in range(len(liste_crypto_market_cap)):
+            total_market_cap += liste_crypto_market_cap[i]
+    
+        liste_crypto_weight = []
+        for i in range(len(liste_crypto_market_cap)):
+            weight = liste_crypto_market_cap[i] / total_market_cap
+            liste_crypto_weight.append(weight)
+        return liste_crypto_weight
+
+    def round_weights(self,liste_weight):
+        somme_weight = 0.0
+        for i in range(len(liste_weight)):
+            liste_weight[i] = round(liste_weight[i], 4)
+            somme_weight += liste_weight[i]
+        if somme_weight != 1.0:
+            error = Decimal('1.0') - Decimal(str(somme_weight))
+            min_weight = min(liste_weight)
+            index_min = liste_weight.index(min_weight)
+            if error > 0:
+                # enlever l'erreur au poids le plus faible
+                liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) + Decimal(str(error)))
+            else:
+                # ajouter l'erreur au poids le plus fort
+                liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) - Decimal(str(error)))

@@ -129,3 +129,19 @@ class CoinGeckoService:
             listeRetourOther[-1]["weight"] = round(Decimal(listeRetourOther[-1]["weight"]) + 1 - Decimal(sommeweight),2)
             
         return listeRetourOther
+    
+    def callCoinGeckoListeCrypto(self,ids = ''):
+        url = "https://api.coingecko.com/api/v3/coins/markets"
+
+        params = {
+            "vs_currency": "usd",
+            "ids": ids
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+
+        response = requests.get(url, headers=headers,params=params)
+        retour = json.loads(response.text)
+        return retour

@@ -2,7 +2,7 @@ import json
 import math
 import numpy as np
 from fastapi import APIRouter
-from app.services.callApiService import callCoinGeckoListeCrypto,getHistorique,getSimpleGeckoApi
+from app.services.callApiService import getHistorique,getSimpleGeckoApi
 from app.services.calculService import CalculService
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
@@ -13,7 +13,7 @@ coinGeckoService = CoinGeckoService()
 callCoinMArketApi = CallCoinMarketApi()
 @cryptorouter.get("/listeCrypto")
 def getListe():
-    listeCoin = callCoinGeckoListeCrypto()
+    listeCoin = coinGeckoService.callCoinGeckoListeCrypto()
     retour = coinGeckoService.excludeStableCoin(listeCoin)
     retour = retour[:10]
     return retour
@@ -68,8 +68,9 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int =
     variationMois = (liste_volatilite[30] - liste_volatilite[60]) / liste_volatilite[60]
     
     # get rank
-    detailCrypto = callCoinGeckoListeCrypto(coin)
+    detailCrypto = coinGeckoService.callCoinGeckoListeCrypto(coin)
     ranking = detailCrypto[0].get("market_cap_rank", 0)
+    
     
     retour = {
             "id":coin,
@@ -118,16 +119,24 @@ def getTop5Corissance():
 @cryptorouter.get("/weights")  
 def getListeCryptoAvecPoids():
     listeCrypto = getListe()
-    listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
+    liste_market_cap =[]
+    for el in listeCrypto:
+        market_cap = coinGeckoService.get_market_cap(el.get("id"))
+        liste_market_cap.append(market_cap)
+        
+    liste_weight = calculService.normalize_weights(liste_market_cap)
+    
+    # listeWithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
     # add volatilite to each listeWithWeight
-    for el in listeWithWeight:
-        resultat = getVolatiliteOneCrypto(el["id"])
-        el["volatiliteJournaliere"] = resultat.get("volatiliteJournaliere",0)
-        el['variationj1'] = resultat.get("variationj1")
-        el["volatiliteAnnuel"] = resultat.get("volatiliteAnnuel")
+    for i in range(len(listeCrypto)):
+        resultat = getVolatiliteOneCrypto(listeCrypto[i]["id"])
+        listeCrypto[i]["volatiliteJournaliere"] = resultat.get("volatiliteJournaliere",0)
+        listeCrypto[i]['variationj1'] = resultat.get("variationj1")
+        listeCrypto[i]["volatiliteAnnuel"] = resultat.get("volatiliteAnnuel")
+        listeCrypto[i]['weight'] = liste_weight[i]
         
     
-    return listeWithWeight
+    return listeCrypto
 
 @cryptorouter.get("/GraphWeights")  
 def getGraphPoids():
