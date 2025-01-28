@@ -1,5 +1,7 @@
 
-/app/services/__pycache__
+__pycache__/
 *.pyc
-*.pyc
+*.csv
 test.py
+myprogramme.py
+programe.py

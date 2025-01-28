@@ -1,7 +1,31 @@
-from decimal import Decimal
+from decimal import Decimal, getcontext
+import json
+import requests
+import pandas as pd
+
+key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 
 class CoinGeckoService:
-    def excludeStableCoin(self, listeCoin):
+    def get_liste_crypto(self):
+        url = "https://api.coingecko.com/api/v3/coins/markets"
+
+        params = {
+            "vs_currency": "usd",
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+
+        response = requests.get(url, headers=headers,params=params)
+        df = json.loads(response.text)
+        
+        retour = []
+        for i in range(len(df)):
+            retour.append(df[i])
+    
+        return retour
+    def excludeStableCoin(self,listeCoin):
         # List of known stablecoin symbols to exclude
         stablecoin_symbols = {"usdt", "usdc", "busd", "dai", "tusd", "ust", "gusd", "pax", "eurs", "frax", "husd"}
         
@@ -11,18 +35,35 @@ class CoinGeckoService:
             if el.get("symbol", "").lower() in stablecoin_symbols:
                 continue
             
-            # Exclude assets with minimal price change (e.g., ±1% in 24h)
-            # price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
-            # if abs(price_change_percentage_24h) < 1:
-            #     continue
-            
+            # Exclude assets with minimal price change (e.g., ±0.01% in 24h)
+            price_change_percentage_24h = el.get("price_change_percentage_24h", 0)
+            if abs(price_change_percentage_24h) < 0.01:
+                continue
             # Add non-stablecoins to the result list
             listeRetour.append(el)
         
         return listeRetour
     
+    def get_historical_prices(self,crypto, vs_currency='usd', days=90):
+        url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+        params = {
+            'vs_currency': vs_currency,
+            'days': days,
+            'interval': 'daily'
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()
+        prices = data['prices']
+        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+        df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df['price'] = df['price'].round(2)
+        return df[['date', 'price']]
+    
     def getListeCryptoWithWeight(self, listeCrypto):
-        from decimal import Decimal, getcontext
 
         # Augmenter la précision des calculs pour réduire les erreurs
         getcontext().prec = 28  
@@ -55,6 +96,17 @@ class CoinGeckoService:
             el["weight"] += round(el["weight"] / somme_arrondie * erreur_totale, 2)
             sommett += el["weight"]
         return listeRetour
+    
+    def get_market_cap(self,crypto):
+        url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+        response = requests.get(url, headers=headers)
+        data = response.json()
+        market_cap = data['market_data']['market_cap']['usd']
+        return market_cap
 
     def getGraphWeight(self,listeCrypto):
         # if wieght < 1% we put all of then in a coin labeed other and add all thier weight together

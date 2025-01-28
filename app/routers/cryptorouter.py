@@ -90,14 +90,12 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", days: int = 90):
         return retour
 
 @cryptorouter.get("/fearAndGreed") 
-def getFearAndGreed():
+async def getFearAndGreed():
     try:
-        fearGred = callCoinMArketApi.getFearAndGreed()
+        fearGred = await callCoinMArketApi.getFearAndGreed()
         return fearGred
     except Exception as e:
         return str(e)
-    # fearGred = callCoinMArketApi.getFearAndGreed()
-    # return fearGred
     
 @cryptorouter.get("/listeCryptoVolatilite")    
 def getListeCryptoAvecVolatilite():
@@ -157,3 +155,40 @@ def getvaltilitePortefeuille():
     
     return retour
 
+@cryptorouter.get("/Comparaison")  
+async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum"):
+    listeCrypto = await getListe()
+    
+    listeFinale = ['','']
+    for crypto in listeCrypto:
+        if crypto.get("id") == crypto1Id:
+            listeFinale[0] = crypto
+        elif crypto.get("id") == crypto2Id:
+            listeFinale[1] = crypto
+    listeFinale = coinGeckoService.getListeCryptoWithWeight(listeFinale)
+    historique1 = await getHistorique(coin = crypto1Id)
+    historique_data1 = json.loads(historique1)
+    prices1 = historique_data1.get("prices", [])
+    prices1 = [price[1] for price in prices1]
+    # listeVolatilite1 = calculService.getListeVolatilite(prices1)
+    # volatilite1 = listeVolatilite1[-1]
+    
+    historique2 = await getHistorique(coin = crypto2Id)
+    historique_data2 = json.loads(historique2)
+    prices2 = historique_data2.get("prices", [])
+    prices2 = [price[1] for price in prices2]
+    # listeVolatilite2 = calculService.getListeVolatilite(prices2)
+    # volatilite2 = listeVolatilite2[-1]
+    print(listeFinale)
+    listePrix = [prices1,prices2]
+    volatilite,matriceCovariance = calculService.getvolatilitePortefeuil(listeFinale, listePrix)
+    
+    retour = {
+        "crypto1":crypto1Id,
+        # "volatiliteJournaliere1": volatilite1,
+        "crypto2":crypto2Id,
+        # "volatiliteJournaliere2": volatilite2,
+        
+        "matricecovarance": matriceCovariance,
+    }
+    return retour
