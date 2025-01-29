@@ -143,7 +143,7 @@ def getGraphPoids():
     return coinGeckoService.getGraphWeight(listeCrypto)
     
 @cryptorouter.get("/VolatiliteGenerale")  
-def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
+async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     # obtenir la liste des crypto
     liste_crypto = getListe()
     
@@ -156,7 +156,7 @@ def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     # get liste_weight
     liste_market_cap =[]
     for el in liste_crypto:
-        market_cap = coinGeckoService.get_market_cap(el.get("id"))
+        market_cap = await coinGeckoService.get_market_cap(el.get("id"))
         liste_market_cap.append(market_cap)
         
     liste_weight = calculService.normalize_weights(liste_market_cap)
