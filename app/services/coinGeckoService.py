@@ -97,7 +97,7 @@ class CoinGeckoService:
             sommett += el["weight"]
         return listeRetour
     
-    def get_market_cap(self,crypto):
+    async def get_market_cap(self,crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
         headers = {
             "accept": "application/json",

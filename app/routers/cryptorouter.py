@@ -143,19 +143,42 @@ def getGraphPoids():
     return coinGeckoService.getGraphWeight(listeCrypto)
     
 @cryptorouter.get("/VolatiliteGenerale")  
-def getvaltilitePortefeuille():
+async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     # obtenir la liste des crypto
-    listeCrypto = getListe()
+    liste_crypto = getListe()
     
-    listeCryptowithWeight = coinGeckoService.getListeCryptoWithWeight(listeCrypto)
-    listePrix = calculService.getListePrix(listeCryptowithWeight)
+    # get liste de prix
+    liste_prix = []
+    for el in liste_crypto:
+        historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
+        liste_prix.append(historique)
     
-    # getHistorique volatilite generale 
-    historiqueVolatiliteGenerale = calculService.getHistoriqueVolatiliteGenerale(90,listeCryptowithWeight,listePrix)
-    # print(historiqueVolatiliteGenerale)
+    # get liste_weight
+    liste_market_cap =[]
+    for el in liste_crypto:
+        market_cap = await coinGeckoService.get_market_cap(el.get("id"))
+        liste_market_cap.append(market_cap)
+        
+    liste_weight = calculService.normalize_weights(liste_market_cap)
+    liste_weight = calculService.round_weights(liste_weight)
+    
+    liste_volatilite_portefeuille = []
+    for i in range(len(liste_prix[0])-3):
+        liste_prix_utiliser = []
+        for el in liste_prix:
+            test = []
+            if i!= 0:
+                test = el.iloc[:-i] 
+            else:
+                test =  el
+            liste_prix_utiliser.append(test)
+        liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix_utiliser,liste_crypto,liste_weight)
+        liste_volatilite_portefeuille.append(portfolio_volatility_mat)
+            
+        
     retour = {
-        "volatiliteGenerale": historiqueVolatiliteGenerale[-1],
-        "historiqueVolatiliteGenerale": historiqueVolatiliteGenerale
+        "volatiliteGenerale": liste_volatilite_portefeuille[0],
+        "historiqueVolatiliteGenerale": liste_volatilite_portefeuille,
     }
     
     return retour

@@ -183,3 +183,34 @@ class CalculService:
                 # ajouter l'erreur au poids le plus fort
                 liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) - Decimal(str(error)))
         return liste_weight
+    
+    def calculate_statistics(self,liste_price,liste_crypto,liste_weight):
+        # Joindre les datasets des liste  sur les dates and add suffixe (liste_crypto[i].get("name"))
+    
+        merged = liste_price[0].rename(columns={'price': 'price_' + liste_crypto[0].get("id")})
+        for i in range(1, len(liste_price)):
+            liste_price[i] = liste_price[i].rename(columns={'price': 'price_' + liste_crypto[i].get("id")})
+            merged = pd.merge(merged, liste_price[i], on='date')
+        
+        # Calculer les rendements journaliers pour les crypto de la liste
+        
+        for i in range(len(liste_crypto)):
+            merged[liste_crypto[i].get("id")] = np.log(merged['price_'+liste_crypto[i].get("id")] / merged['price_'+liste_crypto[i].get("id")].shift(1))
+        
+        # Supprimer les valeurs NaN
+        merged.dropna(inplace=True)
+        
+        # Calcul de la volatilité historique
+        liste_volatilite = []
+        for i in range(len(liste_crypto)):
+            vol = merged[liste_crypto[i].get("id")].std()
+            liste_volatilite.append(vol)
+        
+        # Calcul de la covariance entre les cryptos de la liste
+        covariance_matrix = merged[[f'{crypto.get("id")}' for crypto in liste_crypto]].cov()
+        
+        # Méthode matricielle (plus précise)
+        weights = np.array(liste_weight)
+        portfolio_volatility_mat = np.sqrt(weights.T @ covariance_matrix.values @ weights)
+        
+        return liste_volatilite, portfolio_volatility_mat,covariance_matrix
