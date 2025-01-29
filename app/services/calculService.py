@@ -214,3 +214,8 @@ class CalculService:
         portfolio_volatility_mat = np.sqrt(weights.T @ covariance_matrix.values @ weights)
         
         return liste_volatilite, portfolio_volatility_mat,covariance_matrix
+    
+    def calculate_correlation_matrix(self,covariance_matrix):
+        std_devs = np.sqrt(np.diag(covariance_matrix))
+        correlation_matrix = covariance_matrix / np.outer(std_devs, std_devs)
+        return correlation_matrix

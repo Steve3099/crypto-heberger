@@ -184,39 +184,35 @@ async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     return retour
 
 @cryptorouter.get("/Comparaison")  
-async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum"):
-    listeCrypto = await getListe()
+async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_currency = "USD",days= 90):
+    listeCrypto = getListe()
     
-    listeFinale = ['','']
+    liste_crypto = ['','']
     for crypto in listeCrypto:
         if crypto.get("id") == crypto1Id:
-            listeFinale[0] = crypto
+            liste_crypto[0] = crypto
         elif crypto.get("id") == crypto2Id:
-            listeFinale[1] = crypto
-    listeFinale = coinGeckoService.getListeCryptoWithWeight(listeFinale)
-    historique1 = await getHistorique(coin = crypto1Id)
-    historique_data1 = json.loads(historique1)
-    prices1 = historique_data1.get("prices", [])
-    prices1 = [price[1] for price in prices1]
-    # listeVolatilite1 = calculService.getListeVolatilite(prices1)
-    # volatilite1 = listeVolatilite1[-1]
+            liste_crypto[1] = crypto
     
-    historique2 = await getHistorique(coin = crypto2Id)
-    historique_data2 = json.loads(historique2)
-    prices2 = historique_data2.get("prices", [])
-    prices2 = [price[1] for price in prices2]
-    # listeVolatilite2 = calculService.getListeVolatilite(prices2)
-    # volatilite2 = listeVolatilite2[-1]
-    print(listeFinale)
-    listePrix = [prices1,prices2]
-    volatilite,matriceCovariance = calculService.getvolatilitePortefeuil(listeFinale, listePrix)
+    liste_prix = []
+    for el in liste_crypto:
+        historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
+        liste_prix.append(historique)
     
-    retour = {
-        "crypto1":crypto1Id,
-        # "volatiliteJournaliere1": volatilite1,
-        "crypto2":crypto2Id,
-        # "volatiliteJournaliere2": volatilite2,
+    # get liste_weight
+    liste_market_cap =[]
+    for el in liste_crypto:
+        market_cap = await coinGeckoService.get_market_cap(el.get("id"))
+        liste_market_cap.append(market_cap)
         
-        "matricecovarance": matriceCovariance,
+    liste_weight = calculService.normalize_weights(liste_market_cap)
+    liste_weight = calculService.round_weights(liste_weight)
+    
+    
+    liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
+        
+    correlation_matrix = calculService.calculate_correlation_matrix(covariance_matrix)
+    retour = {
+        "matricecorrelation": correlation_matrix,
     }
     return retour
