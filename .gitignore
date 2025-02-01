@@ -7,3 +7,4 @@ myprogramme.py
 programe.py
 venv/
 /venv
+*.json

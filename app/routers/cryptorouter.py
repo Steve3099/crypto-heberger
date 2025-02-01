@@ -61,8 +61,8 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int =
     historique = coinGeckoService.get_historical_prices(coin,vs_currency, days)
     
     # put historique on json file
-    with open(coin+'_historique.json', 'w') as f:
-        f.write(historique.to_json())
+    # with open(coin+'_historique.json', 'w') as f:
+    #     f.write(historique.to_json())
     
     liste_volatilite = calculService.getListeVolatilite(historique)
     
@@ -139,11 +139,11 @@ def getTop5Corissance():
     return retour
 
 @cryptorouter.get("/weights")  
-def getListeCryptoAvecPoids():
+async def getListeCryptoAvecPoids():
     listeCrypto = getListe()
     liste_market_cap =[]
     for el in listeCrypto:
-        market_cap = coinGeckoService.get_market_cap(el.get("id"))
+        market_cap = await coinGeckoService.get_market_cap(el.get("id"))
         liste_market_cap.append(market_cap)
         
     liste_weight = calculService.normalize_weights(liste_market_cap)
@@ -160,8 +160,8 @@ def getListeCryptoAvecPoids():
     return listeCrypto
 
 @cryptorouter.get("/GraphWeights")  
-def getGraphPoids():
-    listeCrypto = getListeCryptoAvecPoids()
+async def getGraphPoids():
+    listeCrypto = await getListeCryptoAvecPoids()
     return coinGeckoService.getGraphWeight(listeCrypto)
     
 @cryptorouter.get("/VolatiliteGenerale")  
