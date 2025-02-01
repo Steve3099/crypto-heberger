@@ -50,7 +50,7 @@ class CoinGeckoService:
         #  check if crypto+_historique.json exist
         try:
             # Load JSON
-            with open('historique_prix_json/'+crypto + "_historique.json") as f:
+            with open('app/historique_prix_json/'+crypto + "_historique.json") as f:
                 historique = json.load(f)
             df = pd.DataFrame(historique)  
             
@@ -84,7 +84,7 @@ class CoinGeckoService:
                 df['price'] = df['price'].round(2)
                 
                 # put historique on json file
-                with open('historique_prix_json/'+crypto+'_historique.json', 'w') as f:
+                with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
                     f.write(df.to_json(date_format="iso", orient="records", indent=4))
 
             return df[['date', 'price']]  # Return only date and price
@@ -109,7 +109,7 @@ class CoinGeckoService:
             df['price'] = df['price'].round(2)
             
             # put historique on json file dans un fichier json
-            with open('historique_prix_json/'+crypto+'_historique.json', 'w') as f:
+            with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
                 f.write(df.to_json(date_format="iso", orient="records", indent=4))
             
             return df[['date', 'price']]
