@@ -52,12 +52,18 @@ def getSimpleListe():
 @cryptorouter.get("/VolatiliteOneCripto")
 def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int = 90):
     
+    # check if historique of coin is already available in a json file
+    # try:
+    #     with open(coin+'_historique.json') as f:
+    #         historique = json.load(f)
+    #     historique = pd.read_json(historique)
+    
     historique = coinGeckoService.get_historical_prices(coin,vs_currency, days)
     
-    # volatilite journaliere
-    # volatilite = calculService.calculVolatilliteJournaliere(historique)
+    # put historique on json file
+    with open(coin+'_historique.json', 'w') as f:
+        f.write(historique.to_json())
     
-    # historique volatilite journlaiere
     liste_volatilite = calculService.getListeVolatilite(historique)
     
     volatiliteJ = liste_volatilite[0]
@@ -103,9 +109,25 @@ def getListeCryptoAvecVolatilite():
     
 
 @cryptorouter.get("/top10Volatilite") 
-def getTop10VolatiliteJournaliere():
-    listeCrypto = getListe()
-    retour = calculService.top10volatiliteJournaliere(listeCrypto)
+def getTop10VolatiliteJournaliere(vs_currency = 'usd', days ='90'):
+    liste_crypto = getListe()
+    liste_prix = []
+    for el in liste_crypto:
+        historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
+        liste_prix.append(historique)
+    
+    retour = []
+    for i in range(len(liste_crypto)):
+        volatiliteJournaliere = calculService.calculVolatilliteJournaliere(liste_prix[i])
+        volatiliteAnnuel = volatiliteJournaliere * math.sqrt(365)
+        retour.append({
+            "coin":liste_crypto[i],
+            "volatiliteJournaliere": volatiliteJournaliere,
+            "volatiliteAnnuel": volatiliteAnnuel
+        })
+    # trier la liste decroissant selon la volatilite journaiere
+    retour.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
+    # retour = calculService.top10volatiliteJournaliere(listeCrypto)
     
     return retour
     
@@ -152,6 +174,9 @@ async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     for el in liste_crypto:
         historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
         liste_prix.append(historique)
+    
+    # put liste prix in cache
+    
     
     # get liste_weight
     liste_market_cap =[]
