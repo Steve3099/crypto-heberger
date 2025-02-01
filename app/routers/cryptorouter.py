@@ -56,12 +56,12 @@ def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int =
     
     liste_volatilite = calculService.getListeVolatilite(historique)
     
-    volatiliteJ = liste_volatilite[0]
-    volatiliteJ2 = liste_volatilite[1]
+    volatiliteJ = liste_volatilite[1]
+    volatiliteJ2 = liste_volatilite[2]
     variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
 
-    volatiliteMois = liste_volatilite[30]
-    variationMois = (liste_volatilite[30] - liste_volatilite[60]) / liste_volatilite[60]
+    volatiliteMois = liste_volatilite[31]
+    variationMois = (liste_volatilite[31] - liste_volatilite[61]) / liste_volatilite[61]
     
     # get rank
     detailCrypto = coinGeckoService.callCoinGeckoListeCrypto(coin)
@@ -190,8 +190,8 @@ async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
             
         
     retour = {
-        "volatiliteGenerale": liste_volatilite_portefeuille[0],
-        "historiqueVolatiliteGenerale": liste_volatilite_portefeuille,
+        "volatiliteGenerale": liste_volatilite_portefeuille[1],
+        "historiqueVolatiliteGenerale": liste_volatilite_portefeuille[1:],
     }
     
     return retour
