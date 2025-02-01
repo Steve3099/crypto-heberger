@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal, getcontext
 import json
 import requests
@@ -45,24 +46,74 @@ class CoinGeckoService:
         return listeRetour
     
     def get_historical_prices(self,crypto, vs_currency='usd', days=90):
-        url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
-        params = {
-            'vs_currency': vs_currency,
-            'days': days,
-            'interval': 'daily'
-        }
-        headers = {
-            "accept": "application/json",
-            "x-cg-demo-api-key": 'CG-pq44GDj1HKecURw2UA1uUYz8'
-        }
-        response = requests.get(url, headers=headers, params=params)
-        data = response.json()
-        prices = data['prices']
-        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
-        df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df['price'] = df['price'].round(2)
-        return df[['date', 'price']]
-    
+        
+        #  check if crypto+_historique.json exist
+        try:
+            # Load JSON
+            with open('historique_prix_json/'+crypto + "_historique.json") as f:
+                historique = json.load(f)
+            df = pd.DataFrame(historique)  
+            
+            # 🔹 Convert `numpy` data types to standard Python types
+            df["price"] = df["price"].astype(float)  # Convert to Python float
+            df["date"] = df["date"].astype(str) 
+            
+            # verif if last date is > today 00:00:00
+            today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            last_date = df['date'].iloc[-1]
+            try:
+                last_date = datetime.datetime.strptime(last_date, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError:
+                last_date = datetime.datetime.strptime(last_date, "%Y-%m-%dT%H:%M:%S.%f")
+            if last_date < today:
+                url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+                params = {
+                    'vs_currency': vs_currency,
+                    'days': days,
+                    'interval': 'daily'
+                }
+                headers = {
+                    "accept": "application/json",
+                    "x-cg-demo-api-key": 'CG-pq44GDj1HKecURw2UA1uUYz8'
+                }
+                response = requests.get(url, headers=headers, params=params)
+                data = response.json()
+                prices = data['prices']
+                df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+                df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+                df['price'] = df['price'].round(2)
+                
+                # put historique on json file
+                with open('historique_prix_json/'+crypto+'_historique.json', 'w') as f:
+                    f.write(df.to_json(date_format="iso", orient="records", indent=4))
+
+            return df[['date', 'price']]  # Return only date and price
+
+        except Exception as e:
+            print(f"Error: {e}")
+            url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+            params = {
+                'vs_currency': vs_currency,
+                'days': days,
+                'interval': 'daily'
+            }
+            headers = {
+                "accept": "application/json",
+                "x-cg-demo-api-key": 'CG-pq44GDj1HKecURw2UA1uUYz8'
+            }
+            response = requests.get(url, headers=headers, params=params)
+            data = response.json()
+            prices = data['prices']
+            df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+            df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df['price'] = df['price'].round(2)
+            
+            # put historique on json file dans un fichier json
+            with open('historique_prix_json/'+crypto+'_historique.json', 'w') as f:
+                f.write(df.to_json(date_format="iso", orient="records", indent=4))
+            
+            return df[['date', 'price']]
+
     def getListeCryptoWithWeight(self, listeCrypto):
 
         # Augmenter la précision des calculs pour réduire les erreurs
