@@ -52,17 +52,7 @@ def getSimpleListe():
 @cryptorouter.get("/VolatiliteOneCripto")
 def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int = 90):
     
-    # check if historique of coin is already available in a json file
-    # try:
-    #     with open(coin+'_historique.json') as f:
-    #         historique = json.load(f)
-    #     historique = pd.read_json(historique)
-    
     historique = coinGeckoService.get_historical_prices(coin,vs_currency, days)
-    
-    # put historique on json file
-    # with open(coin+'_historique.json', 'w') as f:
-    #     f.write(historique.to_json())
     
     liste_volatilite = calculService.getListeVolatilite(historique)
     
@@ -127,7 +117,6 @@ def getTop10VolatiliteJournaliere(vs_currency = 'usd', days ='90'):
         })
     # trier la liste decroissant selon la volatilite journaiere
     retour.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
-    # retour = calculService.top10volatiliteJournaliere(listeCrypto)
     
     return retour
     
@@ -135,7 +124,6 @@ def getTop10VolatiliteJournaliere(vs_currency = 'usd', days ='90'):
 def getTop5Corissance():
     listeCrypto = getListe()
     retour = calculService.top5CroissanceDevroissance(listeCrypto)
-    
     return retour
 
 @cryptorouter.get("/weights")  
