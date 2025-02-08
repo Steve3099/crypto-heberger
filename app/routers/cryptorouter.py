@@ -122,7 +122,7 @@ async def getTop10VolatiliteJournaliere(vs_currency = 'usd', days ='90'):
     # trier la liste decroissant selon la volatilite journaiere
     retour.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
     
-    return retour
+    return retour[:10]
     
 @cryptorouter.get("/top5Bot5") 
 async def getTop5Corissance():
