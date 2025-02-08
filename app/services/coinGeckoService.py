@@ -182,7 +182,7 @@ class CoinGeckoService:
         
         return retour
     
-    def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
+    async def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
         params = {
             'vs_currency': vs_currency,
@@ -204,7 +204,7 @@ class CoinGeckoService:
         with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
             f.write(df.to_json(date_format="iso", orient="records", indent=4))
     
-    def set_market_cap_to_json(self,crypto):
+    async def set_market_cap_to_json(self,crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
         headers = {
             "accept": "application/json",
@@ -225,7 +225,7 @@ class CoinGeckoService:
     async def schedule_historique_prix(self):
         liste_crypto = await self.callCoinGeckoListeCrypto()
         for i in range(0,len(liste_crypto)):
-            self.set_historical_price_to_json(liste_crypto[i].get('id'))
+            await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
             
             if i%10 == 0:
@@ -235,7 +235,7 @@ class CoinGeckoService:
     async def schedule_market_cap(self):
         liste_crypto = await self.callCoinGeckoListeCrypto()
         for i in range(0,len(liste_crypto)):
-            self.set_market_cap_to_json(liste_crypto[i].get('id'))
+            await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
             
             if i%10 == 0:

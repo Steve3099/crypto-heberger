@@ -10,13 +10,13 @@ class IndexService:
         index_value = (market_cap / base_market_cap) * 100  # Utilisation du market cap initial comme diviseur
         return round(index_value, 4), market_cap
     
-    def set_Index(self):
+    async def set_Index(self):
         print("Démarrage de l'indice crypto...")
         base_market_cap = None  # Initialisation du diviseur de base
         
         # while True:
         try:
-            filtered_data = coingeckoservice.callCoinGeckoListeCrypto()
+            filtered_data = await coingeckoservice.callCoinGeckoListeCrypto()
             # filtered_data = filter_data(data)
             
             if base_market_cap is None:
