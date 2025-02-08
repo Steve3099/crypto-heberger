@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.routers.cryptorouter import cryptorouter
 from fastapi.middleware.cors import CORSMiddleware
-import app.scheduler as scheduler
+# import app.scheduler as scheduler
 
 app = FastAPI()
 
