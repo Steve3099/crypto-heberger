@@ -70,8 +70,6 @@ class CalculService:
         
         listeVolatilite.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
         
-        
-        
         return listeVolatilite
     
     
@@ -168,19 +166,18 @@ class CalculService:
         return liste_crypto_weight
 
     def round_weights(self,liste_weight):
-        somme_weight = 0.0
+        somme_weight = Decimal('0')
         for i in range(len(liste_weight)):
-            liste_weight[i] = round(liste_weight[i], 4)
+            liste_weight[i] = Decimal(str(round(liste_weight[i], 4)))
             somme_weight += liste_weight[i]
         if somme_weight != 1.0:
             error = Decimal('1.0') - Decimal(str(somme_weight))
             min_weight = min(liste_weight)
             index_min = liste_weight.index(min_weight)
+            
             if error > 0:
-                # enlever l'erreur au poids le plus faible
                 liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) + Decimal(str(error)))
             else:
-                # ajouter l'erreur au poids le plus fort
                 liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) - Decimal(str(error)))
         return liste_weight
     
@@ -199,21 +196,24 @@ class CalculService:
         
         # Supprimer les valeurs NaN
         merged.dropna(inplace=True)
+        merged.fillna(0, inplace=True)  # Replace NaNs with 0
         
         # Calcul de la volatilité historique
         liste_volatilite = []
         for i in range(len(liste_crypto)):
             vol = merged[liste_crypto[i].get("id")].std()
             liste_volatilite.append(vol)
-        
+
         # Calcul de la covariance entre les cryptos de la liste
-        covariance_matrix = merged[[f'{crypto.get("id")}' for crypto in liste_crypto]].cov()
+        covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].dropna().cov()
         
         # Méthode matricielle (plus précise)
-        weights = np.array(liste_weight)
+        weights = np.array([float(w) for w in liste_weight])  # Convertir en float
+
         portfolio_volatility_mat = np.sqrt(weights.T @ covariance_matrix.values @ weights)
         
         return liste_volatilite, portfolio_volatility_mat,covariance_matrix
+        # return 0,0,0
     
     def calculate_correlation_matrix(self,covariance_matrix):
         std_devs = np.sqrt(np.diag(covariance_matrix))
