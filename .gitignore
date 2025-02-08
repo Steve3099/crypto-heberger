@@ -1,10 +1,10 @@
 
 __pycache__/
 *.pyc
-*.csv
 test.py
 myprogramme.py
 programe.py
 venv/
 /venv
-*.json
+extractjson.py
+indice.py
