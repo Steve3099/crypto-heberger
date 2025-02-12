@@ -61,7 +61,7 @@ async def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days:
     variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
 
     volatiliteMois = liste_volatilite[31]
-    variationMois = (liste_volatilite[31] - liste_volatilite[1]) / liste_volatilite[31]
+    variationMois = (liste_volatilite[1] - liste_volatilite[31]) / liste_volatilite[31]
     
     volatiliteJ7 = liste_volatilite[8]
     variationJ7 = (liste_volatilite[8] - liste_volatilite[1]) / liste_volatilite[8]
