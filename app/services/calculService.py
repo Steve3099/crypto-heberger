@@ -203,10 +203,18 @@ class CalculService:
         for i in range(len(liste_crypto)):
             vol = merged[liste_crypto[i].get("id")].std()
             liste_volatilite.append(vol)
+         
+        # print("Shape of merged DataFrame:", merged.shape)
+        # print("First few rows of merged:\n", merged.head())
 
+        # if merged.isna().sum().sum() > 0:
+        #     print("⚠️ Still NaNs exist in data!")
+        #     return 1,1,1
         # Calcul de la covariance entre les cryptos de la liste
-        covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].dropna().cov()
-        
+        # print(liste_crypto)
+        covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].dropna(how="any").cov()
+
+        # return 0,0,0
         # Méthode matricielle (plus précise)
         weights = np.array([float(w) for w in liste_weight])  # Convertir en float
 

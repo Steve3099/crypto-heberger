@@ -16,7 +16,7 @@ indexService = IndexService()
 @cryptorouter.get("/listeCrypto")
 async def getListe():
     retour = await coinGeckoService.callCoinGeckoListeCrypto()
-    # retour = retour[:10]
+    # retour = retour[0:75]
     return retour
 
 @cryptorouter.get("/volatilite")
@@ -61,18 +61,18 @@ async def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days:
     variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
 
     volatiliteMois = liste_volatilite[31]
-    variationMois = (liste_volatilite[31] - liste_volatilite[61]) / liste_volatilite[61]
+    variationMois = (liste_volatilite[31] - liste_volatilite[1]) / liste_volatilite[31]
     
     volatiliteJ7 = liste_volatilite[8]
-    variationJ7 = (liste_volatilite[8] - liste_volatilite[9]) / liste_volatilite[9]
+    variationJ7 = (liste_volatilite[8] - liste_volatilite[1]) / liste_volatilite[8]
     
     # get rank
     detailCrypto = await coinGeckoService.callCoinGeckoListeCrypto(coin)
-    # ranking = detailCrypto[0].get("market_cap_rank", 0)    
+    ranking = detailCrypto[0].get("market_cap_rank", 0)    
     
     retour = {
             "id":coin,
-            # "rank":ranking,
+            "rank":ranking,
             "volatiliteAnnuel" : volatiliteJ * np.sqrt(365),
             "volatiliteJournaliere": volatiliteJ,
             "volatiliteJ1": volatiliteJ2,
@@ -172,10 +172,11 @@ async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
     for el in liste_crypto:
         market_cap = await coinGeckoService.get_market_cap(el.get("id"))
         liste_market_cap.append(market_cap)
-
+    
     liste_weight = calculService.normalize_weights(liste_market_cap)
     liste_weight = calculService.round_weights(liste_weight)
     liste_volatilite_portefeuille = []
+    
     for i in range(len(liste_prix[0])-3):
         liste_prix_utiliser = []
         for el in liste_prix:
@@ -185,9 +186,10 @@ async def getvaltilitePortefeuille(vs_currency = 'usd',days =90):
             else:
                 test =  el
             liste_prix_utiliser.append(test)
+        
         liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix_utiliser,liste_crypto,liste_weight)
         liste_volatilite_portefeuille.append(portfolio_volatility_mat)
-        
+    
     retour = {
         "volatiliteGenerale": liste_volatilite_portefeuille[1],
         "historiqueVolatiliteGenerale": liste_volatilite_portefeuille[1:],
@@ -205,7 +207,6 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
             liste_crypto[0] = crypto
         elif crypto.get("id") == crypto2Id:
             liste_crypto[1] = crypto
-    
     liste_prix = []
     for el in liste_crypto:
         historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
@@ -222,7 +223,7 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
     
     
     liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
-        
+    return covariance_matrix
     correlation_matrix = calculService.calculate_correlation_matrix(covariance_matrix)
     retour = {
         "matricecorrelation": correlation_matrix,
@@ -234,3 +235,7 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
 def getIndex():
     index = indexService.get_csv_index()
     return index
+
+@cryptorouter.get("/stablecoin")
+async def stablecoin():
+    return await callCoinMArketApi.get_liste_stablecoins()

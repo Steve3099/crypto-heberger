@@ -8,3 +8,12 @@ venv/
 /venv
 extractjson.py
 indice.py
+file.zip
+listeprix.csv
+covariance_matrix.csv
+crypto.csv
+crypto.json
+current_price.csv
+listemarketcap.csv
+stablecoins.csv
+circulating_supply.csv

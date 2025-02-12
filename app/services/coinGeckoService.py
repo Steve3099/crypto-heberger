@@ -29,15 +29,31 @@ class CoinGeckoService:
         return retour
     def excludeStableCoin(self,data):
         # List of known stablecoin symbols to exclude
-        stablecoins = {'usdc','s','pol','trump','wbt','bonk','chain-2','floki','pepe','hype','shib','usdt', 'usde', 'dai', 'susde', 'fdusd', 'usd0', 'usdc.e', 'pyusd', 'tusd', 'usdy', 'vusdt', 'vusdc', 'eurs', 'eurc', 'usdb', 'usdl', 'crvusd', 'usdg', 'lisusd', 'ustc', 'vbusd', 'usdx', 'lusd', 'aeur', 'gusd', 'sbd', 'eurt', 'qc', 'cusd', 'xsgd', 'rsv', 'scrvusd', 'zusd', 'usdk', 'krt', 'usdt.e', 'idrt', 'usdv', 'mnee', 'susd', 'wusd', 'gyen', 'axlusdc', 'bidr', 'usdj', 'ousd', 'husd', 'vdai', 'const', 'fei', 'ceur', 'jusdt', 'veur', 'ebase', 'djed', 'vai', 'eurr', 'bitusd', 'eosdt', 'usds', 'bgbp', 'mkusd', 'usdsc', 'edlc', 'hgt', 'idrx', 'biteur', 'bac', 'itl', 'usnbt', 'bitgold', 'xeur', 'h2o', 'musd', 'usdex', 'usds', 'iusds', 'usd+', 'mxnt', 'usdz', 'oneichi', 'bvnd', 'usdi', 'bsd', 'jpyc', 'usdr', 'buck', 'dsd', 'euros', 'jusdc', 'onc', 'bbusd', 'sdai', 'zarp', 'usdcash', 'usdex', 'cusd', 'rubcash', 'ist', 'rmbcash'}
+        filtered = []
 
-        wrapped_tokens = {'xcn','move','susds','wrapped-steth','wbtc', 'weth', 'weeth', 'cbbtc', 'wbnb', 'wnxm', 'wmatic', 'wquil', 'wrbtc', 'wxdc', 'wrseth', 'renbtc', 'wht', 'wwan', 'woa', 'wshido', 'telebtc', 'wck', 'wvg0', 'mayfi', 'kbtc', 'wccx', 'wzec', 'ibtc', 'wleo', 'renzec', 'wcelo', 'mausdc', 'wshift', 'wcres', 'wxmr'}  
+        for coin in data:
+            symbol = coin["symbol"].lower()
+            price = coin["current_price"]
+            price_change_24h = abs(coin["price_change_percentage_24h"])
+            total_volume = coin["total_volume"]
+            
+            # Detect Stablecoins (Price around $1 and Low Volatility)
+            is_stablecoin = (0.98 <= price <= 1.02 and price_change_24h < 0.5)
 
-        
-        filtered = [coin for coin in data if 
-                    coin["symbol"] not in stablecoins and 
-                    coin["symbol"] not in wrapped_tokens and 
-                    coin["total_volume"] >= 2000000]
+            # Detect Wrapped Tokens (Symbol starts with "w" or resembles a known pattern)
+            is_wrapped = (symbol.startswith("w") and len(symbol) > 1) or "wrapped" in coin["id"] or  "wrapped" in coin["name"].lower()
+
+            #  dectect those which were ceated less than 90 days ago th attribut is "atl_date": "2013-07-06T00:00:00.000Z",
+            
+
+
+            # Assuming coin["atl_date"] is in ISO 8601 format
+            is_new = datetime.datetime.fromisoformat(coin["atl_date"].replace("Z", "")) > (datetime.datetime.now() - datetime.timedelta(days=90))
+
+            # Filter only valid tokens
+            if not is_stablecoin and not is_wrapped and total_volume >= 2_000_000 and not is_new:
+                filtered.append(coin)
+
         return filtered[:80]
     
     def get_historical_prices(self,crypto, vs_currency='usd', days=90):
@@ -177,7 +193,6 @@ class CoinGeckoService:
 
         response = requests.get(url, headers=headers,params=params)
         retour = json.loads(response.text)
-        
         retour = self.excludeStableCoin(retour)
         
         return retour
@@ -198,7 +213,7 @@ class CoinGeckoService:
         prices = data['prices']
         df = pd.DataFrame(prices, columns=['timestamp', 'price'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df['price'] = df['price'].round(2)
+        df['price'] = df['price'].round(8)
         
         # put historique on json file dans un fichier json
         with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
