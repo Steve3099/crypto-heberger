@@ -3,16 +3,27 @@ from decimal import Decimal, getcontext
 import json
 import requests
 import pandas as pd
+import numpy as np
 import time
+from app.services.callCoinMarketApi import CallCoinMarketApi
+from app.services.calculService import CalculService
 
-key = "CG-pq44GDj1HKecURw2UA1uUYz8"
+coinMarketApi  = CallCoinMarketApi()
+calculService = CalculService()
 
+# key = "CG-pq44GDj1HKecURw2UA1uUYz8"
+key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 class CoinGeckoService:
-    def get_liste_crypto(self):
+    async def get_liste_crypto(self,categorie_id="layer-1",page=1):
         url = "https://api.coingecko.com/api/v3/coins/markets"
 
         params = {
             "vs_currency": "usd",
+            "per_page": 250,
+            "category": categorie_id,
+            "page":page,
+            "order": "market_cap_desc"
+            # "order": "volume_desc"
         }
         headers = {
             "accept": "application/json",
@@ -26,36 +37,59 @@ class CoinGeckoService:
         for i in range(len(df)):
             retour.append(df[i])
         
-        return retour
+        return df
+    
+    async def get_liste_crypto_no_filtre(self,categorie_id="layer-1",page=1):
+        url = "https://api.coingecko.com/api/v3/coins/markets"
+
+        params = {
+            "vs_currency": "usd",
+            "per_page": 250,
+            # "category": categorie_id,
+            "page":page,
+            # "order": "volume_desc"
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+
+        response = requests.get(url, headers=headers,params=params)
+        df = json.loads(response.text)
+        
+        retour = []
+        for i in range(len(df)):
+            retour.append(df[i])
+        
+        return df
     def excludeStableCoin(self,data):
         # List of known stablecoin symbols to exclude
-        filtered = []
-
-        for coin in data:
-            symbol = coin["symbol"].lower()
-            price = coin["current_price"]
-            price_change_24h = abs(coin["price_change_percentage_24h"])
-            total_volume = coin["total_volume"]
-            
-            # Detect Stablecoins (Price around $1 and Low Volatility)
-            is_stablecoin = (0.98 <= price <= 1.02 and price_change_24h < 0.5)
-
-            # Detect Wrapped Tokens (Symbol starts with "w" or resembles a known pattern)
-            is_wrapped = (symbol.startswith("w") and len(symbol) > 1) or "wrapped" in coin["id"] or  "wrapped" in coin["name"].lower()
-
-            #  dectect those which were ceated less than 90 days ago th attribut is "atl_date": "2013-07-06T00:00:00.000Z",
-            
-
-
-            # Assuming coin["atl_date"] is in ISO 8601 format
-            is_new = datetime.datetime.fromisoformat(coin["atl_date"].replace("Z", "")) > (datetime.datetime.now() - datetime.timedelta(days=90))
-
-            # Filter only valid tokens
-            if not is_stablecoin and not is_wrapped and total_volume >= 2_000_000 and not is_new:
-                filtered.append(coin)
-
-        return filtered[:80]
+        id_Stable_Coin = "604f2753ebccdd50cd175fc1"
+        id_Wrapped_Token = "6053df7b6be1bf5c15e865ed"
+        stablecoins = coinMarketApi.get_liste_symbole_by_id_categorie(id_Stable_Coin)
+        wrapped_tokens = coinMarketApi.get_liste_symbole_by_id_categorie(id_Wrapped_Token)
+        
+        filtered = [coin for coin in data if 
+                    coin["symbol"].lower() not in stablecoins and 
+                    coin["symbol"].lower() not in wrapped_tokens and 
+                    coin["current_price"] is not None and 
+                    coin["market_cap"]  > 0 and
+                    coin["price_change_percentage_24h"] is not None and
+                    (coin["total_volume"]  is not  None or coin["total_volume"] >= 2000000)]
+        
+        return filtered
     
+    async def get_liste_crypto_filtered(self):
+        list_crypto_page_1 = await self.get_liste_crypto(page = 1)
+        
+        list_crypto_page_2 = await self.get_liste_crypto(page = 2)
+
+        list_crypto = list_crypto_page_1 + list_crypto_page_2
+
+        list_crypto = self.excludeStableCoin(list_crypto)
+        
+        return list_crypto
+            
     def get_historical_prices(self,crypto, vs_currency='usd', days=90):
         
         #  check if crypto+_historique.json exist
@@ -198,6 +232,9 @@ class CoinGeckoService:
         return retour
     
     async def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
+        
+        
+        
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
         params = {
             'vs_currency': vs_currency,
@@ -238,7 +275,7 @@ class CoinGeckoService:
             f.write(json.dumps(market_cap_data, indent=4))
     
     async def schedule_historique_prix(self):
-        liste_crypto = await self.callCoinGeckoListeCrypto()
+        liste_crypto = await self.get_liste_crypto_filtered()
         for i in range(0,len(liste_crypto)):
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
@@ -248,7 +285,7 @@ class CoinGeckoService:
                 time.sleep(60)
     
     async def schedule_market_cap(self):
-        liste_crypto = await self.callCoinGeckoListeCrypto()
+        liste_crypto = await self.get_liste_crypto_filtered()
         for i in range(0,len(liste_crypto)):
             await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
@@ -256,4 +293,76 @@ class CoinGeckoService:
             if i%10 == 0:
                 # sleep 1 minute
                 time.sleep(60)
+    async def schedule_liste_crypto_with_weight_volatility(self):
+        listeCrypto = await self.get_liste_crypto_filtered()
+        # listeCrypto = listeCrypto[247:]
+        liste_market_cap =[]
+        for el in listeCrypto:
+            market_cap = await self.get_market_cap(el.get("id"))
+            liste_market_cap.append(market_cap)
+        
+        # return listeCrypto,liste_market_cap
+        
+        liste_weight = calculService.normalize_weights(liste_market_cap)
+        liste_weight = calculService.round_weights(liste_weight)
+        # add volatilite to each listeWithWeight
+        liste_new = []
+        for i in range(len(listeCrypto)):
+            historique = self.get_historical_prices(listeCrypto[i]["id"],"usd", 90)
+            
+            if len(historique) > 90 and listeCrypto[i]["market_cap"] > 0:
                 
+                # liste_prix.append(historique)
+            
+                # resultat = calculService.getVolatiliteOneCrypto(listeCrypto[i]["id"])
+                liste_volatilite = await calculService.getListeVolatilite(historique)
+                volatiliteJ = liste_volatilite[1]
+                volatiliteJ2 = liste_volatilite[2]
+                variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
+                
+                listeCrypto[i]["volatiliteJournaliere"] = volatiliteJ
+                listeCrypto[i]['variationj1'] = variationJ1
+                listeCrypto[i]["volatiliteAnnuel"] = volatiliteJ * np.sqrt(365)
+                listeCrypto[i]['weight'] = str(liste_weight[i])
+                liste_new.append(listeCrypto[i])
+                
+        # put liste crypto into json file
+        with open('app/json/liste_crypto/listeCryptoWithWeight.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_new, f, indent=4)
+        # print(liste_new)
+        return liste_new
+    
+    async def get_liste_crypto_with_weight(self):
+        with open('app/json/liste_crypto/listeCryptoWithWeight.json', 'r', encoding='utf-8') as f:
+            liste = json.load(f)
+        return liste
+                
+    async def set_liste_no_folter_to_json(self):
+        liste_crypto = []
+        i = 1
+        t = True
+        while i <= 68:
+            try:
+                temp = await self.get_liste_crypto_no_filtre(page=i)
+                print("page " + str(i)   )
+                print("temp " + str(len(temp)))
+                if len(temp) > 0 or temp != None:
+                    liste_crypto += temp
+                    i += 1
+                elif len(temp) == 0: 
+                    # stop the while loop
+                    t = False
+                    break
+                if i%10 ==0:
+                    time.sleep(60)
+            except Exception as e:
+                print(e)
+                
+        with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_crypto, f, indent=4)
+        return liste_crypto
+    
+    async def get_liste_crypto_nofilter(self):
+        with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'r', encoding='utf-8') as f:
+            liste = json.load(f)
+        return liste

@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 from app.services.callApiService import getHistorique
 
-
 class CalculService:
     def calculRendements(self,prixF,prixAf):
         #call function logarythme
@@ -28,7 +27,7 @@ class CalculService:
         
         return volatilite
     
-    def getListeVolatilite(self,listePrix):
+    async def getListeVolatilite(self,listePrix):
         listeVolatilite = []
         indice = 0
         for i in range(len(listePrix)-2):
@@ -73,7 +72,7 @@ class CalculService:
         return listeVolatilite
     
     
-    def top5CroissanceDevroissance(self,listeCrypto):
+    async def top5CroissanceDevroissance(self,listeCrypto):
         # sort list desc by price_change_24h
         
         listeCrypto.sort(key=lambda x: x.get("price_change_percentage_24h",0),reverse=True)
@@ -105,21 +104,21 @@ class CalculService:
                 break
             
         return listeRetour
-    def getvolatilitePortefeuil(self,listeCrypto,listePrix):
+    async def getvolatilitePortefeuil(self,listeCrypto,listePrix):
         # calcul matrice de covariances
         sommeTotale = 0
         rows = len(listeCrypto)
         cols = len(listeCrypto)
         matrice = [[-1 for _ in range(cols)] for _ in range(rows)]
         for i in range(0,len(listePrix)):
-            volatiliteI = self.getListeVolatilite(listePrix[i])
+            volatiliteI = await self.getListeVolatilite(listePrix[i])
             wheightI = listeCrypto[i].get("weight",0)
             sommeI = 0
             for j in range(0,len(listePrix)):
                 if i == j:
                     volatiliteJ = volatiliteI
                 else:
-                    volatiliteJ = self.getListeVolatilite(listePrix[j])
+                    volatiliteJ = await self.getListeVolatilite(listePrix[j])
                 wheightJ = listeCrypto[j].get("weight",0)
                 produit =0
                 for k in range(0,len(volatiliteJ)):
@@ -166,7 +165,7 @@ class CalculService:
         return liste_crypto_weight
 
     def round_weights(self,liste_weight):
-        somme_weight = Decimal('0')
+        somme_weight = 0
         for i in range(len(liste_weight)):
             liste_weight[i] = Decimal(str(round(liste_weight[i], 4)))
             somme_weight += liste_weight[i]
@@ -176,9 +175,9 @@ class CalculService:
             index_min = liste_weight.index(min_weight)
             
             if error > 0:
-                liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) + Decimal(str(error)))
+                liste_weight[index_min] = Decimal(str(liste_weight[index_min])) + Decimal(str(error))
             else:
-                liste_weight[index_min] = float(Decimal(str(liste_weight[index_min])) - Decimal(str(error)))
+                liste_weight[index_min] = Decimal(str(liste_weight[index_min])) - Decimal(str(error))
         return liste_weight
     
     def calculate_statistics(self,liste_price,liste_crypto,liste_weight):
@@ -188,42 +187,44 @@ class CalculService:
         for i in range(1, len(liste_price)):
             liste_price[i] = liste_price[i].rename(columns={'price': 'price_' + liste_crypto[i].get("id")})
             merged = pd.merge(merged, liste_price[i], on='date')
+        # Dictionary to store new columns
+        new_columns = {}
         
-        # Calculer les rendements journaliers pour les crypto de la liste
-        
-        for i in range(len(liste_crypto)):
-            merged[liste_crypto[i].get("id")] = np.log(merged['price_'+liste_crypto[i].get("id")] / merged['price_'+liste_crypto[i].get("id")].shift(1))
-        
+        for crypto in liste_crypto:
+            crypto_id = crypto.get("id")
+            new_columns[crypto_id] = np.log(
+                merged[f'price_{crypto_id}'] / merged[f'price_{crypto_id}'].shift(1)
+            )
+            
+
+        # Convert dictionary to DataFrame and concatenate once
+        merged = pd.concat([merged, pd.DataFrame(new_columns)], axis=1)
+
+        # Optional: Copy the DataFrame to remove fragmentation
+        merged = merged.copy()
         # Supprimer les valeurs NaN
         merged.dropna(inplace=True)
         merged.fillna(0, inplace=True)  # Replace NaNs with 0
-        
+        # return 0,0,0
         # Calcul de la volatilité historique
         liste_volatilite = []
         for i in range(len(liste_crypto)):
             vol = merged[liste_crypto[i].get("id")].std()
             liste_volatilite.append(vol)
          
-        # print("Shape of merged DataFrame:", merged.shape)
-        # print("First few rows of merged:\n", merged.head())
-
-        # if merged.isna().sum().sum() > 0:
-        #     print("⚠️ Still NaNs exist in data!")
-        #     return 1,1,1
-        # Calcul de la covariance entre les cryptos de la liste
-        # print(liste_crypto)
+        
         covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].dropna(how="any").cov()
 
-        # return 0,0,0
         # Méthode matricielle (plus précise)
         weights = np.array([float(w) for w in liste_weight])  # Convertir en float
 
         portfolio_volatility_mat = np.sqrt(weights.T @ covariance_matrix.values @ weights)
         
         return liste_volatilite, portfolio_volatility_mat,covariance_matrix
-        # return 0,0,0
+        
     
     def calculate_correlation_matrix(self,covariance_matrix):
         std_devs = np.sqrt(np.diag(covariance_matrix))
         correlation_matrix = covariance_matrix / np.outer(std_devs, std_devs)
         return correlation_matrix
+    
