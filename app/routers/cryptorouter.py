@@ -62,7 +62,6 @@ def getSimpleListe():
 
 @cryptorouter.get("/VolatiliteOneCripto")
 async def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days: int = 90):
-    
     raise HTTPException(status_code=403, detail=f"this end point was abandoned and not working anymore")
 
 @cryptorouter.get("/fearAndGreed") 
@@ -82,25 +81,8 @@ async def getListeCryptoAvecVolatilite():
 
 @cryptorouter.get("/top10Volatilite") 
 async def getTop10VolatiliteJournaliere(vs_currency = 'usd', days ='90'):
-    liste_crypto = await getListe()
-    liste_prix = []
-    for el in liste_crypto:
-        historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
-        liste_prix.append(historique)
+    raise HTTPException(status_code=403, detail=f"this end point has been remplaced pleas call \"/volatilite/top10\" instead")
     
-    retour = []
-    for i in range(len(liste_crypto)):
-        volatiliteJournaliere = calculService.calculVolatilliteJournaliere(liste_prix[i])
-        volatiliteAnnuel = volatiliteJournaliere * math.sqrt(365)
-        retour.append({
-            "coin":liste_crypto[i],
-            "volatiliteJournaliere": volatiliteJournaliere,
-            "volatiliteAnnuel": volatiliteAnnuel
-        })
-    # trier la liste decroissant selon la volatilite journaiere
-    retour.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
-    
-    return retour[:10]
     
 @cryptorouter.get("/top5Bot5") 
 async def getTop5Corissance():
@@ -134,7 +116,7 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
             liste_crypto[1] = crypto
     liste_prix = []
     for el in liste_crypto:
-        historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
+        historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency, days)
         liste_prix.append(historique)
     # return 0
     # get liste_weight
@@ -177,5 +159,17 @@ async def getListeNoFilter():
 @cryptorouter.get("/{id}/info")
 async def get_info_crypto(id: str):
     return await cryptoService.get_on_crypto_from_liste_json(id)
+
+@cryptorouter.get("/{id}/priceRange")
+async def get_priceRange(id: str,date_start,date_end):
+    return await cryptoService.get_price_range(id,date_start,date_end)
+
+@cryptorouter.get("/{id}/price/historique")
+async def get_historique_price(id: str,date_start,date_end):
+    return await cryptoService.get_liste_prix_between_2_dates(id,date_start,date_end)
+
+@cryptorouter.get("/{id}/set_price")
+async def set_price(id: str):
+    return await coinGeckoService.set_historical_price_to_json(id)
 
     

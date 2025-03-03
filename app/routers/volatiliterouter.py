@@ -16,7 +16,7 @@ async def get_historique_volatilite_generale(date_start ="2024-11-25T00:00:00.00
 
 @volatiliterouter.get("/volatilite/generale")
 async def get_volatilite_generale():
-    return await volatiliteService.get_get_last_volatilite_from_json()
+    return await volatiliteService.get_last_volatilite_from_json()
 
 @volatiliterouter.get("/volatilite/{id}/data")
 async def get_Data_volatilite_one_crypto(id):
@@ -62,5 +62,9 @@ async def get_historique_volatilite_one_crypto(id,date_start="2024-11-29T00:00:0
         date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
     historique_volatilite = await volatiliteService.get_historique_volatilite_crypto_from_json(id,date_start,date_end)
     return historique_volatilite
+
+@volatiliterouter.get("/volatilite/top10")
+async def get_top10_volatilite():
+    return await volatiliteService.get_top_10_volatilite_crypto()
 
     

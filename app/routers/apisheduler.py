@@ -36,7 +36,7 @@ async def set_volatilite():
     return {"message":"volatilite done"}
 
 @apisheduler.get('/sheduler/listenofilter')
-async def get_liste_sans_filtre():
+async def set_liste_sans_filtre():
     liste_crypto = await coinGeckoService.set_liste_no_folter_to_json()
     return len(liste_crypto)
 
@@ -55,7 +55,22 @@ async def update_volatilite_for_ecah_crypto():
     await volatileService.update_historique_volatilite_for_each_crypto()
     return {"message":"volatilite update done"}
 
+# @apisheduler.get('/sheduler/set_var')
+# async def set_var():
+#     await varService.set_Var_for_each_crypto()
+#     return {"message":"var done"}
+
+@apisheduler.get('/sheduler/action')
+async def action():
+    await set_liste_prix()
+    await set_market_cap()
+    await update_volatilite_generale()
+    await update_volatilite_for_ecah_crypto()
+    await set_liste_sans_filtre()
+    await set_liste_crypto_with_weight()
+    return {"message":"action done"}
+
 @apisheduler.get('/sheduler/set_var')
 async def set_var():
-    await varService.set_Var_for_each_crypto()
-    return {"message":"var done"}
+    return await varService.update_var()
+    # return {"message":"var done"}

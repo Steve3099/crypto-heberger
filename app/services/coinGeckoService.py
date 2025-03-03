@@ -62,7 +62,7 @@ class CoinGeckoService:
             retour.append(df[i])
         
         return df
-    def excludeStableCoin(self,data):
+    async def excludeStableCoin(self,data):
         # List of known stablecoin symbols to exclude
         id_Stable_Coin = "604f2753ebccdd50cd175fc1"
         id_Wrapped_Token = "6053df7b6be1bf5c15e865ed"
@@ -86,11 +86,11 @@ class CoinGeckoService:
 
         list_crypto = list_crypto_page_1 + list_crypto_page_2
 
-        list_crypto = self.excludeStableCoin(list_crypto)
+        list_crypto = await self.excludeStableCoin(list_crypto)
         
         return list_crypto
             
-    def get_historical_prices(self,crypto, vs_currency='usd', days=90):
+    async def get_historical_prices(self,crypto, vs_currency='usd', days=90):
         
         #  check if crypto+_historique.json exist
         try:
@@ -227,7 +227,7 @@ class CoinGeckoService:
 
         response = requests.get(url, headers=headers,params=params)
         retour = json.loads(response.text)
-        retour = self.excludeStableCoin(retour)
+        retour = await self.excludeStableCoin(retour)
         
         return retour
     
@@ -308,7 +308,7 @@ class CoinGeckoService:
         # add volatilite to each listeWithWeight
         liste_new = []
         for i in range(len(listeCrypto)):
-            historique = self.get_historical_prices(listeCrypto[i]["id"],"usd", 90)
+            historique = await self.get_historical_prices(listeCrypto[i]["id"],"usd", 90)
             
             if len(historique) > 90 and listeCrypto[i]["market_cap"] > 0:
                 

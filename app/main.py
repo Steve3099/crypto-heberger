@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from app.routers.cryptorouter import cryptorouter
 from app.routers.apisheduler import apisheduler
 from app.routers.volatiliterouter import volatiliterouter
+from app.routers.varRouter import varrouter
 from fastapi.middleware.cors import CORSMiddleware
 import app.scheduler as scheduler
 
@@ -23,3 +24,4 @@ def read_root():
 app.include_router(cryptorouter)
 app.include_router(apisheduler)
 app.include_router(volatiliterouter)
+app.include_router(varrouter)

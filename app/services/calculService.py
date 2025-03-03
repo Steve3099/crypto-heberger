@@ -185,8 +185,16 @@ class CalculService:
     
         merged = liste_price[0].rename(columns={'price': 'price_' + liste_crypto[0].get("id")})
         for i in range(1, len(liste_price)):
+        # Ensure the 'date' column in both DataFrames is in datetime format
+            liste_price[i]['date'] = pd.to_datetime(liste_price[i]['date'])
+            merged['date'] = pd.to_datetime(merged['date'])
+            
+            # Rename the 'price' column
             liste_price[i] = liste_price[i].rename(columns={'price': 'price_' + liste_crypto[i].get("id")})
+            
+            # Merge on the 'date' column
             merged = pd.merge(merged, liste_price[i], on='date')
+        
         # Dictionary to store new columns
         new_columns = {}
         

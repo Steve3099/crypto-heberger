@@ -22,7 +22,7 @@ class VolatiliteService:
         liste_crypto = []
         liste_prix = []
         for el in liste_crypto_start:
-            historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+            historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
             if len(historique) > 90:
                 liste_crypto.append(el)
                 liste_prix.append(historique)
@@ -91,7 +91,7 @@ class VolatiliteService:
             liste_crypto = []
             liste_prix = []
             for el in liste_crypto_start:
-                historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+                historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
                 if len(historique) > 90:
                     liste_crypto.append(el)
                     liste_prix.append(historique[:-2])
@@ -138,16 +138,18 @@ class VolatiliteService:
                 json.dump(data, f, indent=4, ensure_ascii=False)
                 
     async def get_historique_volatilite_from_json(self,date_debut,date_fin):
-        print(date_fin)
-        with open('app/json/volatilite/volatilite.json', 'r') as f:
-            data = json.load(f)
-            liste = []
-            for el in data:
-                if el["date"] >= date_debut and el["date"] <= date_fin:
-                    liste.append(el)
-            return liste
+        try:
+            with open('app/json/volatilite/volatilite.json', 'r') as f:
+                data = json.load(f)
+                liste = []
+                for el in data:
+                    if el["date"] >= date_debut and el["date"] <= date_fin:
+                        liste.append(el)
+                return liste
+        except FileNotFoundError:
+            return []
         
-    async def get_get_last_volatilite_from_json(self):
+    async def get_last_volatilite_from_json(self):
         with open('app/json/volatilite/volatilite.json', 'r') as f:
             data = json.load(f)
             return data[-1]
@@ -192,7 +194,7 @@ class VolatiliteService:
         liste_historique = []
         
         for el in liste_crypto_start:
-            historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+            historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
             if len(historique) > 90:
                 liste_crypto.append(el)
                 
@@ -218,7 +220,7 @@ class VolatiliteService:
         now = datetime.now()
         
         for el in liste_crypto_start:
-            historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+            historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
             if len(historique) <= 90:
                 continue
             
@@ -257,7 +259,7 @@ class VolatiliteService:
             difference = now - last_date
             difference = difference.days
             if difference >= 2: 
-                historique = coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+                historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
                 listeVolatilite = []
                 for i in range(0,difference-1):
                     if i == 0:
@@ -297,7 +299,7 @@ class VolatiliteService:
         vs_currency="usd"
         
         # for el in liste_crypto_start:
-        historique = coinGeckoService.get_historical_prices(id,vs_currency,90)
+        historique = await coinGeckoService.get_historical_prices(id,vs_currency,90)
         print(len(historique))
         if len(historique) > 90:
             
@@ -316,7 +318,12 @@ class VolatiliteService:
                 json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
             
     async def get_top_10_volatilite_crypto(self):
-        await self.get_historique_volatilite_crypto_from_json("bitcoin")
+        # await self.get_historique_volatilite_crypto_from_json("bitcoin")
+        liste = await coinGeckoService.get_liste_crypto_with_weight()
+        
+        # sort it by volatiliteJournaliere Decroissant
+        liste.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
+        return liste[:10]
         
         
      
