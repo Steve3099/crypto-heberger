@@ -70,3 +70,7 @@ async def get_top10_volatilite():
 @volatiliterouter.get("/volatilite/generale/annuel/historique")
 async def get_historique_volatilite_generale():
     return await volatiliteService.get_volatilite_annuel_data()
+
+@volatiliterouter.get("/volatiliteAnnuel/{id}/historique")
+async def get_historique_volatilite_annuel_one_crypto(id,date_start,date_end):
+    return await volatiliteService.get_volatilite_annuel_for_one_crypto(id,date_start,date_end)

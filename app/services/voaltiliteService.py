@@ -395,5 +395,26 @@ class VolatiliteService:
                 continue
         return "volatilite annuel set"
     
+    async def get_volatilite_annuel_for_one_crypto(self,id,date_start,date_end):
+        try:
+            if date_start is None:
+                raise ValueError("date_start cannot be null")
+            if date_end is None:
+                date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+            
+            
+            
+            if date_start < date_end:
+                raise ValueError("date_start must be less than date_end")
+            with open('app/json/volatilite/volatilite_annuel/crypto/'+id+'_volatilite_annuel.json', 'r') as f:
+                data = json.load(f)
+                liste = []
+                for el in data:
+                    if el["date"] >= date_start and el["date"] <= date_end:
+                        liste.append(el)
+                return liste
+        except FileNotFoundError:
+            raise ValueError("Could not find")
+    
     # 
                 
