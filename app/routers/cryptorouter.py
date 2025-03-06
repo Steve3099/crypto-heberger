@@ -10,6 +10,7 @@ from app.services.coinGeckoService import CoinGeckoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.indexService import IndexService
 from app.services.voaltiliteService import VolatiliteService
+from app.services.varService import VarService
 from datetime import datetime
 
 from fastapi import HTTPException
@@ -21,6 +22,7 @@ callCoinMArketApi = CallCoinMarketApi()
 indexService = IndexService()
 volatiliteService = VolatiliteService()
 cryptoService = CryptoService()
+varService = VarService()
 @cryptorouter.get("/listeCrypto")
 async def getListe():
     retour = await cryptoService.get_liste_crypto_from_json()
@@ -138,8 +140,8 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
 
 # api to get the index csv 
 @cryptorouter.get("/index")
-def getIndex():
-    index = indexService.get_csv_index()
+async def getIndex():
+    index = await indexService.get_csv_index()
     return index
 
 @cryptorouter.get("/stablecoin")
@@ -154,7 +156,8 @@ async def grapheIndex(date_start="2025-02-18 09:19:33", date_end=None):
 
 @cryptorouter.get("/liste/nofilter")
 async def getListeNoFilter():
-    return await coinGeckoService.get_liste_crypto_nofilter()
+    temp = await coinGeckoService.get_liste_crypto_nofilter()
+    return temp[:50]
 
 @cryptorouter.get("/{id}/info")
 async def get_info_crypto(id: str):
@@ -171,5 +174,9 @@ async def get_historique_price(id: str,date_start,date_end):
 @cryptorouter.get("/{id}/set_price")
 async def set_price(id: str):
     return await coinGeckoService.set_historical_price_to_json(id)
+
+@cryptorouter.get("/{id}/var")
+async def get_var(id: str):
+    return await varService.get_var_crypto(id)
 
     

@@ -68,9 +68,36 @@ async def action():
     await update_volatilite_for_ecah_crypto()
     await set_liste_sans_filtre()
     await set_liste_crypto_with_weight()
+    await set_var()
     return {"message":"action done"}
 
 @apisheduler.get('/sheduler/set_var')
 async def set_var():
     return await varService.update_var()
+    # return {"message":"var done"}
+
+@apisheduler.get('/sheduler/set_vollatilite_annuel')
+async def set_vollatilite_annuel():
+    return await volatileService.set_volatilite_annuel()
+    # return {"message":"var done"}
+    
+@apisheduler.get('/sheduler/set_vollatilite_annuel_per_crypto')
+async def set_vollatilite_annuel_per_crypto():
+    return await volatileService.set_historique_volatilite_annuel_per_cryto()
+    # return {"message":"var done"}
+    
+@apisheduler.get('/sheduler/set_historique_volatilite_for_one_crypto')
+async def set_historique_volatilite_for_one_crypto(id):
+    ids = [id]
+    for id in ids:
+        await volatileService.set_historique_volatilite_for_one_crypto(id)
+    # return await volatileService.set_historique_volatilite_for_one_crypto(id)
+    # return {"message":"var done"}
+
+@apisheduler.get('/sheduler/set_historique_prix_for_one_crypto')
+async def set_historique_prix_for_one_crypto(id):
+    ids = [id]
+    for id in ids:
+        await coinGeckoService.set_historical_price_to_json(id)
+    # return await coinGeckoService.set_historical_price_to_json(id)
     # return {"message":"var done"}

@@ -129,6 +129,7 @@ class VolatiliteService:
                     "value": liste_volatilite_portefeuille[-i-1]
                 }
                 liste_volatilite.append(temp)
+                await self.update_volatilite_annuel(temp["date"],temp["value"] * np.sqrt(365))
             
             # add liste_volatilite to bootom of JSON file
             with open('app/json/volatilite/volatilite.json', 'r') as f:
@@ -325,6 +326,74 @@ class VolatiliteService:
         liste.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
         return liste[:10]
         
+    async def set_volatilite_annuel(self):
+        # get volatilite journalier form json
+        with open('app/json/volatilite/volatilite.json', 'r') as f:
+            data = json.load(f)
+            liste = []
+            for el in data:
+                temp = {
+                    "date": el["date"],
+                    "value": el["value"] * np.sqrt(365)
+                }
+                liste.append(temp)
+            
+            # Write liste to JSON file
+            with open('app/json/volatilite/volatilite_annuel/historique.json', 'w', encoding='utf-8') as f:
+                json.dump(liste, f, indent=4, ensure_ascii=False)
+    
+    async def update_volatilite_annuel(self,date,value):
+        # read the file
+        with open('app/json/volatilite/volatilite_annuel/historique.json', 'r') as f:
+            data = json.load(f)
+            data.append({"date":date,"value":value})
+        # add data to JSON file
+        with open('app/json/volatilite/volatilite_annuel/historique.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    
+    async def get_volatilite_annuel_historique(self,date_debut,date_fin):
         
+        # check that nor date_debut nor date fin is null
+        if date_fin is None:
+            date_fin = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+        
+        if date_debut is None:
+            raise ValueError("date_debut cannot be null")
+        
+        # date_debut must be less than date_fin
+        if date_debut > date_fin:
+            raise ValueError("date_debut must be less than date_fin")
+        
+        with open('app/json/volatilite/volatilite_annuel/historique.json', 'r') as f:
+            data = json.load(f)
+            liste = []
+            for el in data:
+                if el["date"] >= date_debut and el["date"] <= date_fin:
+                    liste.append(el)
+            return liste
      
+    async def set_historique_volatilite_annuel_per_cryto(self):
+        liste_crypto_start = await coinGeckoService.get_liste_crypto_filtered()
+        
+        for el in liste_crypto_start:
+            try:
+                with open('app/json/volatilite/'+el.get("id")+'_volatilite.json', 'r') as f:
+                    data = json.load(f)
+                    liste = []
+                    for vol in data:
+                        temp = {
+                            "date": vol["date"],
+                            "value": vol["value"] * np.sqrt(365)
+                        }
+                        liste.append(temp)
+                    
+                    # Write liste to JSON file
+                    with open('app/json/volatilite/volatilite_annuel/crypto/'+el.get("id")+'_volatilite_annuel.json', 'w', encoding='utf-8') as f:
+                        json.dump(liste, f, indent=4, ensure_ascii=False)
+            except FileNotFoundError:
+                print(el.get('id'))
+                continue
+        return "volatilite annuel set"
+    
+    # 
                 

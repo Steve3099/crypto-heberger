@@ -2,6 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.services.indexService import IndexService
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.voaltiliteService import VolatiliteService
+# from app.services.
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 

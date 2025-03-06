@@ -210,3 +210,13 @@ class VarService:
             data = json.load(f)
             data = data[-1]
             return data.get("var")
+    
+    async def get_var_crypto(self,id):
+        try:
+            with open('app/json/var/historique/'+id+'_var.json') as f:
+                data = json.load(f)
+                # data = data[-1]
+                return data.get("var")
+        except FileNotFoundError:
+            raise ValueError("Crypto not found")
+        

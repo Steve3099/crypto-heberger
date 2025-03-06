@@ -95,7 +95,7 @@ def get_market_cap(crypto):
         "accept": "application/json",
         "x-cg-demo-api-key": "CG-pq44GDj1HKecURw2UA1uUYz8"
     }
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, params={})
     data = response.json()
     market_cap = data['market_data']['market_cap']['usd']
     return market_cap

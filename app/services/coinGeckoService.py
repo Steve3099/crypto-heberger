@@ -276,6 +276,7 @@ class CoinGeckoService:
     
     async def schedule_historique_prix(self):
         liste_crypto = await self.get_liste_crypto_filtered()
+        liste_crypto = liste_crypto[:100]
         for i in range(0,len(liste_crypto)):
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
@@ -286,6 +287,7 @@ class CoinGeckoService:
     
     async def schedule_market_cap(self):
         liste_crypto = await self.get_liste_crypto_filtered()
+        liste_crypto = liste_crypto[:100]
         for i in range(0,len(liste_crypto)):
             await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
@@ -341,7 +343,7 @@ class CoinGeckoService:
         liste_crypto = []
         i = 1
         t = True
-        while i <= 68:
+        while i <= 10:
             try:
                 temp = await self.get_liste_crypto_no_filtre(page=i)
                 print("page " + str(i)   )
@@ -353,7 +355,7 @@ class CoinGeckoService:
                     # stop the while loop
                     t = False
                     break
-                if i%10 ==0:
+                if i%10 ==0 and i!= 0:
                     time.sleep(60)
             except Exception as e:
                 print(e)
