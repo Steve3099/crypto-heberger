@@ -182,3 +182,7 @@ async def get_var(id: str):
 @cryptorouter.get("/{id}/market_cap/historique")
 async def get_historique_market_cap(id: str,date_start,date_end):
     return await cryptoService.get_historique_market_cap(id,date_start,date_end)
+
+@cryptorouter.get("/market_cap/generale/historique")
+async def get_historique_market_cap_generale(date_start="2024-11-25T00:00:00.000", date_end = None):
+    return await cryptoService.get_marketcap_generale_between_2_date(date_start,date_end)

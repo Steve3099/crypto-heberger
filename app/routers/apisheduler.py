@@ -3,12 +3,14 @@ from fastapi import APIRouter
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.indexService import IndexService
 from app.services.voaltiliteService import VolatiliteService
+from app.services.cryptoService import CryptoService
 
 apisheduler = APIRouter()
 indexService = IndexService()
 coinGeckoService = CoinGeckoService()
 volatileService = VolatiliteService()
 varService = VarService()
+cryptoService = CryptoService()
 
 @apisheduler.get("/sheduler/listeprix")
 async def set_liste_prix():
@@ -101,3 +103,7 @@ async def set_historique_prix_for_one_crypto(id):
         await coinGeckoService.set_historical_price_to_json(id)
     # return await coinGeckoService.set_historical_price_to_json(id)
     # return {"message":"var done"}
+    
+@apisheduler.get('/sheduler/set_historique_market_cap_for_one_crypto')
+async def set_historique_market_cap_generale():
+    return await cryptoService.set_historique_market_cap_generale()

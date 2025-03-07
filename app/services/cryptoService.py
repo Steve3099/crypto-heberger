@@ -106,5 +106,56 @@ class CryptoService:
             raise HTTPException(status_code=404, detail=f"Market cap for crypto with ID '{id}' not found")
         
         return liste
+    
+    async def set_historique_market_cap_generale(self):
+        liste_crypto = await self.get_liste_crypto_from_json()
+        liste_market_cap_history = []
+        somme_market_cap=0
+        liste_crypto_used = []
+        for crypto in liste_crypto:
+            with open('app/json/crypto/market_cap/'+crypto["id"]+'_market_cap.json', 'r') as f:
+                data = f.read()
+                liste = json.loads(data)
+                if len(liste) < 90:
+                    continue
+                liste_crypto_used.append(crypto)
+                liste_market_cap_history.append(liste)
+        liste_somme_arket_cap = []
+        print(len(liste_crypto_used))
+        for i in range(len(liste_market_cap_history[0])):
+            market_cap =0
+            for j in range(len(liste_crypto_used)):
+                market_cap += liste_market_cap_history[j][i]["market_cap"]
+            data = {
+                "date":liste_market_cap_history[0][i]["date"],
+                "market_cap":market_cap
+            }
+            # do not add if hh:mm:ss is not 00:00:00
+            if data["date"].split("T")[1] != "00:00:00.000":
+                continue
+            liste_somme_arket_cap.append(data)
+        with open('app/json/crypto/market_cap/generale/historique_market_cap_generale.json', 'w') as f:
+            json.dump(liste_somme_arket_cap, f, indent=4, ensure_ascii=False)
+            # f.write(json.dumps(liste_somme_arket_cap))
+        
+        return "market_cap generale done"
+    
+    async def get_marketcap_generale_between_2_date(self,date_start,date_end):
+        if date_end is None:
+            date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+            
+        if date_start > date_end:
+            raise HTTPException(status_code=400, detail="date_start should be less than date_end")
+        
+        with open('app/json/crypto/market_cap/generale/historique_market_cap_generale.json', 'r') as f:
+            data = f.read()
+            liste = json.loads(data)
+            liste_market_cap = []
+            for item in liste:
+                if item["date"] >= date_start and item["date"] <= date_end:
+                    liste_market_cap.append(item)
+            
+            return liste_market_cap
+                
         
         
