@@ -179,4 +179,6 @@ async def set_price(id: str):
 async def get_var(id: str):
     return await varService.get_var_crypto(id)
 
-    
+@cryptorouter.get("/{id}/market_cap/historique")
+async def get_historique_market_cap(id: str,date_start,date_end):
+    return await cryptoService.get_historique_market_cap(id,date_start,date_end)

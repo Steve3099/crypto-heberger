@@ -233,8 +233,6 @@ class CoinGeckoService:
     
     async def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
         
-        
-        
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
         params = {
             'vs_currency': vs_currency,
@@ -248,13 +246,21 @@ class CoinGeckoService:
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
         prices = data['prices']
+        market_cap = data['market_caps']
         df = pd.DataFrame(prices, columns=['timestamp', 'price'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
         df['price'] = df['price'].round(8)
         
+        lf = pd.DataFrame(market_cap, columns=['timestamp', 'market_cap'])
+        lf['date'] = pd.to_datetime(lf['timestamp'], unit='ms')
+        lf['market_cap'] = lf['market_cap'].round(2)
+        
         # put historique on json file dans un fichier json
         with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
             f.write(df.to_json(date_format="iso", orient="records", indent=4))
+        
+        with open('app/json/crypto/market_cap/'+crypto+'_market_cap.json', 'w') as f:
+            f.write(lf.to_json(date_format="iso", orient="records", indent=4))
     
     async def set_market_cap_to_json(self,crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
@@ -368,3 +374,5 @@ class CoinGeckoService:
         with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'r', encoding='utf-8') as f:
             liste = json.load(f)
         return liste
+    
+    

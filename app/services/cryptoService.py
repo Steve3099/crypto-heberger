@@ -81,5 +81,30 @@ class CryptoService:
             "max_price":max_price,
             "min_price":min_price
         }
+    
+    async def get_historique_market_cap(self,id,date_start,date_end):
+        
+        # check if date_start < date_end
+        if date_start > date_end:
+            raise HTTPException(status_code=400, detail="date_start should be less than date_end")
+        
+        # read json file
+        try:
+            with open('app/json/crypto/market_cap/'+id+'_market_cap.json', 'r') as f:
+                
+                data = f.read()
+                # return as a json
+                
+                liste = json.loads(data)
+                liste_market_cap = []
+                for item in liste:
+                    if item["date"] >= date_start and item["date"] <= date_end:
+                        liste_market_cap.append(item)
+                
+                return liste_market_cap
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail=f"Market cap for crypto with ID '{id}' not found")
+        
+        return liste
         
         
