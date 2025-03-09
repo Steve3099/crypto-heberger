@@ -146,6 +146,9 @@ class VolatiliteService:
                 for el in data:
                     if el["date"] >= date_debut and el["date"] <= date_fin:
                         liste.append(el)
+                # order liste by date
+                liste.sort(key=lambda x: x.get("date"))
+                
                 return liste
         except FileNotFoundError:
             return []
@@ -294,6 +297,8 @@ class VolatiliteService:
             for el in data:
                 if el["date"] >= date_start and el["date"] <= date_end:
                     liste.append(el)
+            # order liste by date
+            liste.sort(key=lambda x: x.get("date"))
             return liste
     
     async def set_historique_volatilite_for_one_crypto(self,id):
@@ -370,6 +375,9 @@ class VolatiliteService:
             for el in data:
                 if el["date"] >= date_debut and el["date"] <= date_fin:
                     liste.append(el)
+            # order liste by date
+            liste.sort(key=lambda x: x.get("date"))
+
             return liste
      
     async def set_historique_volatilite_annuel_per_cryto(self):
@@ -403,7 +411,6 @@ class VolatiliteService:
                 date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
             
             
-            
             if date_start < date_end:
                 raise ValueError("date_start must be less than date_end")
             with open('app/json/volatilite/volatilite_annuel/crypto/'+id+'_volatilite_annuel.json', 'r') as f:
@@ -412,6 +419,8 @@ class VolatiliteService:
                 for el in data:
                     if el["date"] >= date_start and el["date"] <= date_end:
                         liste.append(el)
+                # order liste by date
+                liste.sort(key=lambda x: x.get("date"))
                 return liste
         except FileNotFoundError:
             raise ValueError("Could not find")

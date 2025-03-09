@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 from datetime import datetime
-
+import os
 coinGeckoService = CoinGeckoService()
 
 
@@ -43,15 +43,6 @@ class VarService:
         # Supprimer les valeurs NaN
         merged.dropna(inplace=True)
         merged.fillna(0, inplace=True)
-        # return merged,0
-        # put merge prix to csv
-        # merged.to_csv('Varlisteprix.csv', index=False)
-        # Joindre les deux datasets sur les dates
-        # merged = pd.merge(btc_prices, eth_prices, on='date', suffixes=('_btc', '_eth'))
-        
-        # Calculer les rendements journaliers pour BTC et ETH
-        # merged['log_return_btc'] = np.log(merged['price_btc'] / merged['price_btc'].shift(1))
-        # merged['log_return_eth'] = np.log(merged['price_eth'] / merged['price_eth'].shift(1))
         if merged.isna().sum().sum() > 0:
             print("Il y a encore des NaN dans merged :", merged.isna().sum())
         # return merged,0
@@ -99,7 +90,6 @@ class VarService:
                 market_cap = await coinGeckoService.get_market_cap(el.get("id"))
                 liste_market_cap.append(market_cap)
                 somme_market_cap += market_cap
-        # return liste_prix   
         liste_weight = []
         for market_cap in liste_market_cap:
             liste_weight.append(market_cap / somme_market_cap)
@@ -107,39 +97,6 @@ class VarService:
         liste_var, var_portfolio = await self.calculate_var(liste_prix, liste_crypto, liste_weight, percentile=1)
         # return liste_var, var_portfolio 
         return liste_var, var_portfolio,liste_weight,liste_crypto
-        print("=== Résultats ===")
-        today = datetime.now().strftime("%Y-%m-%d")
-        # poids des cfypto
-        for i in range(len(liste_weight)):
-            # get date today JJ/MM/YYYY
-            
-            data = {
-                "date": today,
-                "weight": liste_weight[i]
-            }
-            # store weight in json file
-            with open('app/json/var/weight/'+liste_crypto[i].get('id')+'_wieght.json', 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-            # print(f"Weight for {liste_crypto[i].get('id')} : {liste_weight[i]}")
-            
-        # for i in range(len(liste_var)):
-            data = {
-                    "date": today,
-                    "var": liste_var[i]
-                }
-            with open('app/json/var/historique/'+liste_crypto[i].get('id')+'_var.json', 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-            # print(f"VaR historique de {liste_crypto_start[i].get('name')} à 99% : {liste_var[i]:.4f}")
-
-        # print(f"VaR historique du BTC à 99% : {var_btc:.4f}")
-        # print(f"VaR historique de l'ETH à 99% : {var_eth:.4f}")
-        print(f"VaR historique du portefeuille à 99% : {var_portfolio:.4f}")
-        data = {
-            "date": today,
-            "var": var_portfolio
-        }
-        with open('app/json/var/generale/var.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
         
     
     async def update_var(self):
@@ -157,6 +114,7 @@ class VarService:
             # get var for each crypto
         
             liste_var, var_portfolio,liste_weight,liste_crypto = await self.get_Var_for_each_crypto()
+            liste_var = calculate_var_v2(liste_prix, liste_crypto, percentile=1)
             # update var.json
             dataVar = {
                 "date": today,
@@ -215,8 +173,65 @@ class VarService:
         try:
             with open('app/json/var/historique/'+id+'_var.json') as f:
                 data = json.load(f)
-                # data = data[-1]
+                data = data[-1]
                 return data.get("var")
         except FileNotFoundError:
             raise ValueError("Crypto not found")
+    
+    async def calculate_var_v2(self,prices_list, crypto_names, percentile=1):
+        var_results = {}
+    
+        for i, prices in enumerate(prices_list):
+            crypto_name = crypto_names[i].get("id")
+            print(crypto_name)
+            # Calculer les rendements journaliers logarithmiques
+            prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
+            # Supprimer les valeurs NaN
+            prices.dropna(inplace=True)
+            # Calcul de la VaR historique (sans interpolation)
+            var_percentile = np.percentile(prices['log_return'], percentile,method='lower')
+            var_results[crypto_name] = var_percentile
+        
+        return var_results
+    
+    async def update_var_v2(self):
+        # get liste crypto
+        liste_crypto = await coinGeckoService.get_liste_crypto_filtered()
+        # return liste_crypto
+        # get liste price
+        liste_price = []
+        for el in liste_crypto:
+            historique = await coinGeckoService.get_historical_prices(el.get('id'),"usd",90)
+            # if len(historique) > 90:
+            liste_price.append(historique)
+        # calculate var
+        liste_var = await self.calculate_var_v2(liste_price, liste_crypto, 1)
+        # return liste_var
+        # save var to json
+        today = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        for item in liste_crypto:
+            print(item.get('id'))
+            file_path = f"app/json/var/historique/{item.get('id')}_var.json"
+            data = {
+                "date": today,
+                "var": liste_var[item.get("id")]
+            }
+
+            # Check if file exists and is not empty
+            if not os.path.exists(file_path) or os.stat(file_path).st_size == 0:
+                data_list = [data]  # Create a new list with the first entry
+            else:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    try:
+                        data_list = json.load(f)
+                        if not isinstance(data_list, list):  # Ensure it's a list
+                            data_list = [data_list]
+                    except json.JSONDecodeError:
+                        data_list = []  # Handle corrupt or empty files
+                data_list.append(data)  # Append the new entry
+
+            # Write updated data back to file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data_list, f, indent=4, ensure_ascii=False)
+        
         

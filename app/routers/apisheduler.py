@@ -75,7 +75,7 @@ async def action():
 
 @apisheduler.get('/sheduler/set_var')
 async def set_var():
-    return await varService.update_var()
+    return await varService.update_var_v2()
     # return {"message":"var done"}
 
 @apisheduler.get('/sheduler/set_vollatilite_annuel')
