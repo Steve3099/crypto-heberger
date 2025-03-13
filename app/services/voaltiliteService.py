@@ -411,7 +411,7 @@ class VolatiliteService:
                 date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
             
             
-            if date_start < date_end:
+            if date_start > date_end:
                 raise ValueError("date_start must be less than date_end")
             with open('app/json/volatilite/volatilite_annuel/crypto/'+id+'_volatilite_annuel.json', 'r') as f:
                 data = json.load(f)

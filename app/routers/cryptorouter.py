@@ -11,6 +11,7 @@ from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.indexService import IndexService
 from app.services.voaltiliteService import VolatiliteService
 from app.services.varService import VarService
+from app.services.skeuness_kurtoService import Skewness_KurtoService
 from datetime import datetime
 
 from fastapi import HTTPException
@@ -23,6 +24,7 @@ indexService = IndexService()
 volatiliteService = VolatiliteService()
 cryptoService = CryptoService()
 varService = VarService()
+skewness_KurtoService = Skewness_KurtoService()
 @cryptorouter.get("/listeCrypto")
 async def getListe():
     retour = await cryptoService.get_liste_crypto_from_json()
@@ -69,7 +71,7 @@ async def getVolatiliteOneCrypto(coin: str = "bitcoin", vs_currency='usd' ,days:
 @cryptorouter.get("/fearAndGreed") 
 async def getFearAndGreed():
     try:
-        fearGred = await callCoinMArketApi.getFearAndGreed()
+        fearGred = await cryptoService.get_fear_and_greed_from_json()
         return fearGred
     except Exception as e:
         return str(e)
@@ -155,9 +157,9 @@ async def grapheIndex(date_start="2025-02-18 09:19:33", date_end=None):
     return await indexService.get_liste_index_from_json_file(date_start, date_end)
 
 @cryptorouter.get("/liste/nofilter")
-async def getListeNoFilter():
-    temp = await coinGeckoService.get_liste_crypto_nofilter()
-    return temp[:50]
+async def getListeNoFilter(page: int = 1, quantity: int  = 50):
+    temp = await cryptoService.get_liste_crypto_nofilter(page,quantity)
+    return temp
 
 @cryptorouter.get("/{id}/info")
 async def get_info_crypto(id: str):
@@ -186,3 +188,7 @@ async def get_historique_market_cap(id: str,date_start,date_end):
 @cryptorouter.get("/market_cap/generale/historique")
 async def get_historique_market_cap_generale(date_start="2024-11-25T00:00:00.000", date_end = None):
     return await cryptoService.get_marketcap_generale_between_2_date(date_start,date_end)
+
+@cryptorouter.get("/{id}/skewness_kurtosis")
+async def get_skewness_kurtosis(id: str):
+    return await skewness_KurtoService.get_skewness_kurtosis(id)

@@ -1,8 +1,10 @@
 import json
 from app.services.coinGeckoService import CoinGeckoService
+from app.services.callCoinMarketApi import CallCoinMarketApi
 from fastapi import HTTPException
 from datetime import datetime
 coinGeckoService = CoinGeckoService()
+callCoinMarketApi = CallCoinMarketApi()
 
 class CryptoService:
     async def get_crypto_rankings(self,id):
@@ -156,6 +158,47 @@ class CryptoService:
                     liste_market_cap.append(item)
             
             return liste_market_cap
+    
+    async def set_info_one_crypto(self,id,info):
+        
+        with open('app/json/crypto/info/'+id+'_info.json', 'w', encoding='utf-8') as f:
+            json.dump(info, f, indent=4, ensure_ascii=False)
+            # f.write(json.dumps(info))
+        return "info "+id+" done"
+    
+    async def set_info_crypto(self):
+        liste_coin_getcko = await coinGeckoService.set_liste_no_folter_to_json()
+        liste_coin_market_cap = await callCoinMarketApi.get_liste_cypto_ufiltered()
+        
+        liste_crypto = []
+        for item in liste_coin_getcko:
+            for item2 in liste_coin_market_cap:
+                # ignore case in comparaison majuscule/minuscule
+                if item["name"].lower() == item2["name"].lower():
+                    item["volume_24h"] = item2["volume_24h"]
+                    liste_crypto.append(item)
+                    # await self.set_info_one_crypto(item["id"],item)
+                    break
+        
+        with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_crypto, f, indent=4, ensure_ascii=False)
+            # f.write(json.dumps(info))
+    
+    async def get_liste_crypto_nofilter(self,page,quantity):
+        with open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
+            liste = json.load(f)
+        # order by market cap
+        liste = sorted(liste, key=lambda x: x["market_cap"], reverse=True)
+        
+        # get the page
+        liste = liste[(page-1)*quantity:page*quantity]
+        return liste
+        
+    async def get_fear_and_greed_from_json(self):
+        with open('app/json/fearAndGreed/fearAndGreed.json', 'r') as f:
+            data = f.read()
+            return json.loads(data)
+        
                 
         
         

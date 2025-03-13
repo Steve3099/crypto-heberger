@@ -114,7 +114,7 @@ class VarService:
             # get var for each crypto
         
             liste_var, var_portfolio,liste_weight,liste_crypto = await self.get_Var_for_each_crypto()
-            liste_var = calculate_var_v2(liste_prix, liste_crypto, percentile=1)
+            liste_var = await self.calculate_var_v2(liste_prix, liste_crypto, percentile=1)
             # update var.json
             dataVar = {
                 "date": today,
@@ -183,7 +183,7 @@ class VarService:
     
         for i, prices in enumerate(prices_list):
             crypto_name = crypto_names[i].get("id")
-            print(crypto_name)
+            
             # Calculer les rendements journaliers logarithmiques
             prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
             # Supprimer les valeurs NaN

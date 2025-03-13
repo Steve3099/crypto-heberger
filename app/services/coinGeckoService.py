@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal, getcontext
+import http
 import json
 import requests
 import pandas as pd
@@ -7,12 +8,13 @@ import numpy as np
 import time
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.calculService import CalculService
+from fastapi import HTTPException
 
 coinMarketApi  = CallCoinMarketApi()
 calculService = CalculService()
 
-# key = "CG-pq44GDj1HKecURw2UA1uUYz8"
-key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
+key = "CG-pq44GDj1HKecURw2UA1uUYz8"
+# key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 class CoinGeckoService:
     async def get_liste_crypto(self,categorie_id="layer-1",page=1):
         url = "https://api.coingecko.com/api/v3/coins/markets"
@@ -287,7 +289,7 @@ class CoinGeckoService:
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
             
-            if i%10 == 0:
+            if i%25 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     
@@ -298,7 +300,7 @@ class CoinGeckoService:
             await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
             
-            if i%10 == 0:
+            if i%25 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     async def schedule_liste_crypto_with_weight_volatility(self):
@@ -349,7 +351,7 @@ class CoinGeckoService:
         liste_crypto = []
         i = 1
         t = True
-        while i <= 10:
+        while i <= 61:
             try:
                 temp = await self.get_liste_crypto_no_filtre(page=i)
                 print("page " + str(i)   )
@@ -361,11 +363,12 @@ class CoinGeckoService:
                     # stop the while loop
                     t = False
                     break
-                if i%10 ==0 and i!= 0:
+                if i%25 ==0 and i!= 0:
                     time.sleep(60)
             except Exception as e:
-                print(e)
-                
+                raise HTTPException(status_code=404, detail=str(e))
+        return liste_crypto
+        
         with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'w', encoding='utf-8') as f:
             json.dump(liste_crypto, f, indent=4)
         return liste_crypto
