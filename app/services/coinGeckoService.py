@@ -9,11 +9,18 @@ import time
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.calculService import CalculService
 from fastapi import HTTPException
-
+import os
+from pathlib import Path
 coinMarketApi  = CallCoinMarketApi()
 calculService = CalculService()
 
-key = "CG-pq44GDj1HKecURw2UA1uUYz8"
+# get the key from the environnement variable or .env file
+from dotenv import load_dotenv
+BASE_DIR = Path(__file__).resolve().parent.parent 
+load_dotenv(BASE_DIR / ".env")
+key = os.getenv("key_coin_gecko")
+
+# key = "CG-pq44GDj1HKecURw2UA1uUYz8"
 # key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 class CoinGeckoService:
     async def get_liste_crypto(self,categorie_id="layer-1",page=1):
@@ -234,7 +241,9 @@ class CoinGeckoService:
         return retour
     
     async def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
-        
+        # print(os.environ)
+        # print(key)
+        # return key
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
         params = {
             'vs_currency': vs_currency,
@@ -289,7 +298,7 @@ class CoinGeckoService:
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
             
-            if i%25 == 0 and i!= 0:
+            if i%20 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     
@@ -300,7 +309,7 @@ class CoinGeckoService:
             await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
             
-            if i%25 == 0 and i!= 0:
+            if i%20 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     async def schedule_liste_crypto_with_weight_volatility(self):
@@ -363,7 +372,7 @@ class CoinGeckoService:
                     # stop the while loop
                     t = False
                     break
-                if i%25 ==0 and i!= 0:
+                if i%20 ==0 and i!= 0:
                     time.sleep(60)
             except Exception as e:
                 raise HTTPException(status_code=404, detail=str(e))
