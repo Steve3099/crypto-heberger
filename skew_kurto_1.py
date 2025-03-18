@@ -122,6 +122,7 @@ list_crypto = list_crypto[:10]
 # eth_prices = get_historical_prices('ethereum', days=90)
 
 prices_list = []
+liste = []
 for i in range(len(list_crypto)):
     crypto = list_crypto[i]
     
@@ -129,18 +130,25 @@ for i in range(len(list_crypto)):
     df = get_historical_prices(crypto = crypto.get("id"), days =90)
     
     prices_list.append(df)
-    
-print(prices_list[0])
-# Liste des prix et noms des cryptos
-# prices_list = [btc_prices, eth_prices]
-# crypto_names = ['bitcoin', 'ethereum']
+    liste.append(df.copy())
 
 # Calculer le skewness et le kurtosis pour chaque crypto
-# results = calculate_skewness_kurtosis(prices_list, list_crypto)
+results = calculate_skewness_kurtosis(prices_list, list_crypto)
+
+merged = liste[0].rename(columns={'price': 'price_' + list_crypto[0].get("name")})
+for i in range(1, len(liste)):
+    liste[i] = liste[i].rename(columns={'price': 'price_' + list_crypto[i].get("name")})
+    merged = pd.merge(merged, liste[i], on='date')
+
+# # put merge  into csv
+merged.to_csv('listeprix.csv', index=False)
 
 # # Afficher les résultats
-# print("=== Résultats ===")
-# for crypto, metrics in results.items():
-#     print(f"{crypto.capitalize()} :")
-#     print(f"  Skewness : {metrics['skewness']:.4f}")
-#     print(f"  Kurtosis : {metrics['kurtosis']:.4f}")
+print("=== Résultats ===")
+for crypto, metrics in results.items():
+    print(f"{crypto.capitalize()} :")
+    print(f"  Skewness : {metrics['skewness']:.4f}")
+    print(f"  Kurtosis : {metrics['kurtosis']:.4f}")
+# put metrics into json
+with open('metrics.json', 'w') as f:
+    json.dump(results, f)
