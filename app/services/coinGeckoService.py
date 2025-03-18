@@ -114,8 +114,7 @@ class CoinGeckoService:
             
             return df[['date', 'price']]  # Return only date and price
 
-        except Exception as e:
-            print(f"Error: {e}")
+        except FileNotFoundError:
             url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
             params = {
                 'vs_currency': vs_currency,
