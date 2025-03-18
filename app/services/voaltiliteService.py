@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from app.services.calculService import CalculService
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
@@ -217,6 +218,67 @@ class VolatiliteService:
                 with open('app/json/volatilite/'+el.get("id")+'_volatilite.json', 'w', encoding='utf-8') as f:
                     json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
     
+    async def update_historique_volatilite_for_one_crypto(self,id):
+        # check if file exist
+        try:
+            f = open('app/json/volatilite/'+id+'_volatilite.json', 'r')
+        except FileNotFoundError:
+            # print(el.get("id"))
+            await self.set_historique_volatilite_for_one_crypto(id)
+        # read the file
+        with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
+            # check if f is not null
+            if f is None:
+                historique_volatilite = await self.get_historique_Volatilite(historique)
+            # liste_historique.append(historique_volatilite)
+                historique_volatilite_crypto = []
+                for i in range(1,len(historique[:-2])):
+                    
+                    temp = {
+                        "date": historique[0]["date"][i],
+                        "value": historique_volatilite[-i]
+                    }
+                    historique_volatilite_crypto.append(temp)
+                # Write historique_volatilite_crypto to JSON file
+                with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
+                    json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
+                data = historique_volatilite_crypto
+            else:
+                data = json.load(f)
+            
+        # get the last element
+        last_element = data[-1]
+        now = datetime.now()
+    # check if the difference between the last date and now is greater than 2 day
+        last_date = datetime.strptime(last_element["date"], '%Y-%m-%dT%H:%M:%S.%f')
+        difference = now - last_date
+        difference = difference.days
+        if difference >= 2: 
+            historique = await coinGeckoService.get_historical_prices(id,"usd",90)
+            listeVolatilite = []
+            for i in range(0,difference-1):
+                if i == 0:
+                    listeVolatilite.append(await self.calcul_Volatillite_Journaliere_one_crypto(historique))
+                else:
+                    price = historique[:-i]
+                    listeVolatilite.append(await self.calcul_Volatillite_Journaliere_one_crypto(price))
+                
+            # put the listeVolatilite into the bottom oth json file
+            liste_volatilite = []
+            for i in range(0, len(listeVolatilite)):  
+                temp = {
+                    "date": historique["date"][len(historique[:-2])-difference+i+1],
+                    "value": listeVolatilite[-i-1]
+                }
+                liste_volatilite.append(temp)
+            
+            # add liste_volatilite to bootom of JSON file
+            with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
+                data = json.load(f)
+                data += liste_volatilite
+            with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            return data
     async def update_historique_volatilite_for_each_crypto(self):
         vs_currency="usd"
         liste_crypto_start = await coinGeckoService.get_liste_crypto_filtered()
@@ -291,23 +353,45 @@ class VolatiliteService:
     async def get_historique_volatilite_crypto_from_json(self,id,date_start="2024-11-29T00:00:00.000",date_end=None):
         if date_end is None:
             date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
-        with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
-            data = json.load(f)
-            liste = []
-            for el in data:
-                if el["date"] >= date_start and el["date"] <= date_end:
-                    liste.append(el)
-            # order liste by date
-            liste.sort(key=lambda x: x.get("date"))
-            return liste
+        #  get today date only get the year month day
+        today = datetime.now().date()
+        try:
+            with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
+                data = json.load(f)
+                liste = []
+                # get last date
+                last_date = data[-1]["date"]
+                # check if the diference between last date and today is greater than 2 days
+                last_date = datetime.strptime(last_date, '%Y-%m-%dT%H:%M:%S.%f').date()
+                difference = today - last_date
+                if difference.days >= 2:
+                    data = await self.update_historique_volatilite_for_one_crypto(id)
+                for el in data:
+                    if el["date"] >= date_start and el["date"] <= date_end:
+                        liste.append(el)
+                # order liste by date
+                liste.sort(key=lambda x: x.get("date"))
+                return liste
+        except FileNotFoundError:
+            await self.set_historique_volatilite_for_one_crypto(id)
+            with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
+                data = json.load(f)
+                liste = []
+                for el in data:
+                    if el["date"] >= date_start and el["date"] <= date_end:
+                        liste.append(el)
+                # order liste by date
+                liste.sort(key=lambda x: x.get("date"))
+                return liste
     
     async def set_historique_volatilite_for_one_crypto(self,id):
         vs_currency="usd"
         
         # for el in liste_crypto_start:
         historique = await coinGeckoService.get_historical_prices(id,vs_currency,90)
+        
         print(len(historique))
-        if len(historique) > 90:
+        if len(historique) > 10:
             
             historique_volatilite = await self.get_historique_Volatilite(historique)
             # liste_historique.append(historique_volatilite)
@@ -322,7 +406,8 @@ class VolatiliteService:
             # Write historique_volatilite_crypto to JSON file or create the file if it doesn't exist
             with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
                 json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
-            
+        else:
+            raise HTTPException(status_code=403, detail=f"crypto trop jeune pour avoir un historique de volatilité")
     async def get_top_10_volatilite_crypto(self):
         # await self.get_historique_volatilite_crypto_from_json("bitcoin")
         liste = await coinGeckoService.get_liste_crypto_with_weight()
