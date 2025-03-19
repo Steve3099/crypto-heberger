@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from fastapi import HTTPException
+
 from app.services.voaltiliteService import VolatiliteService
 from app.services.cryptoService import CryptoService
 from app.services.varService import VarService
@@ -18,7 +20,8 @@ class SimulateurService:
         # return historique_volatilite
         now = datetime.now().date()
         for i in range(len(valeur)):
-            
+            if valeur[i] < 0:
+                raise HTTPException(status_code=400, detail="valeur must be positive")
             historique_prix.loc[len(historique_prix)] = [now, valeur[i]]
             volatilite = await volatiliteService.calcul_Volatillite_Journaliere_one_crypto(historique_prix)
             new_volatilite= {
@@ -32,6 +35,11 @@ class SimulateurService:
     
     async def simulateur_var(self, id,valeur):
         # Code
+        
+        # valuer must be positive
+        if valeur < 0:
+            raise HTTPException(status_code=400, detail="valeur must be positive")
+        
         # get liste prix crypto
         liste_prix = await cryptoService.get_liste_prix_from_json(id)
         now = datetime.now().date()
