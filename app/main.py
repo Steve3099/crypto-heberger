@@ -3,6 +3,7 @@ from app.routers.cryptorouter import cryptorouter
 from app.routers.apisheduler import apisheduler
 from app.routers.volatiliterouter import volatiliterouter
 from app.routers.varRouter import varrouter
+from app.routers.simulateurRouter import simulateurRouter
 from fastapi.middleware.cors import CORSMiddleware
 import app.scheduler as scheduler
 
@@ -25,3 +26,4 @@ app.include_router(cryptorouter)
 app.include_router(apisheduler)
 app.include_router(volatiliterouter)
 app.include_router(varrouter)
+app.include_router(simulateurRouter)

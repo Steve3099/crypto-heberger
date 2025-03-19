@@ -139,7 +139,13 @@ class VolatiliteService:
             with open('app/json/volatilite/volatilite.json', 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
                 
-    async def get_historique_volatilite_from_json(self,date_debut,date_fin):
+    async def get_historique_volatilite_from_json(self,date_debut = None,date_fin = None):
+        if date_debut is None:
+            date_debut = "2024-11-29T00:00:00.000"
+        
+        if date_fin is None:
+            date_fin = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+        
         try:
             with open('app/json/volatilite/volatilite.json', 'r') as f:
                 data = json.load(f)

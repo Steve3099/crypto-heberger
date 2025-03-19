@@ -194,6 +194,55 @@ class VarService:
         
         return var_results
     
+    async def calcul_var_one_crypto(self, liste_prix,percentile=1):
+        # crypto_name = crypto_names[i].get("id")
+        
+        # Calculer les rendements journaliers logarithmiques
+        liste_prix['log_return'] = np.log(liste_prix['price'] / liste_prix['price'].shift(1))
+        # Supprimer les valeurs NaN
+        liste_prix.dropna(inplace=True)
+        # Calcul de la VaR historique (sans interpolation)
+        var_percentile = np.percentile(liste_prix['log_return'], percentile,method='lower')
+        return var_percentile
+    
+    # async def calulate_var_one_crypto(self, id, percentile=1):
+    #     prices = await coinGeckoService.get_historical_prices(id, "usd", 90)
+    #     var_results = {}
+    #     crypto_name = id
+    #     # Calculer les rendements journaliers logarithmiques
+    #     prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
+    #     # Supprimer les valeurs NaN
+    #     prices.dropna(inplace=True)
+    #     # Calcul de la VaR historique (sans interpolation)
+    #     var_percentile = np.percentile(prices['log_return'], percentile, method='lower')
+    #     var_results[crypto_name] = var_percentile
+        
+    #     # put it into json file
+    #     today = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    #     file_path = f"app/json/var/historique/{id}_var.json"
+    #     data = {
+    #         "date": today,
+    #         "var": var_percentile
+    #     }
+    #     data_list = []
+    #     if not os.path.exists(file_path) or os.stat(file_path).st_size == 0:
+    #         data_list = [data]  # Create a new list with the first entry
+    #     else:
+    #         with open(file_path, 'r', encoding='utf-8') as f:
+    #             try:
+    #                 data_list = json.load(f)
+    #                 if not isinstance(data_list, list):  # Ensure it's a list
+    #                     data_list = [data_list]
+    #             except json.JSONDecodeError:
+    #                 data_list = []  # Handle corrupt or empty files
+    #         data_list.append(data)  # Append the new entry
+
+    #     # Write updated data back to file
+    #     with open(file_path, 'w', encoding='utf-8') as f:
+    #         json.dump(data_list, f, indent=4, ensure_ascii=False)
+        
+    #     return var_results
+    
     async def update_var_v2(self):
         # get liste crypto
         liste_crypto = await coinGeckoService.get_liste_crypto_filtered()
