@@ -186,18 +186,48 @@ class CryptoService:
     
     async def get_liste_crypto_nofilter(self,page,quantity):
         with open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
-            liste = json.load(f)
+            liste1 = json.load(f)
         # order by market cap
-        liste = sorted(liste, key=lambda x: x["market_cap"], reverse=True)
+        liste = sorted(liste1, key=lambda x: x["market_cap"], reverse=True)
         
         # get the page
+        quantite_de_donner = len(liste)
+        # round up
+        
+        nombre_de_page = -(-len(liste) // quantity) 
         liste = liste[(page-1)*quantity:page*quantity]
-        return liste
+        
+        page = page
+        return {
+            "quantite_de_donner":quantite_de_donner,
+            "nombre_de_page":nombre_de_page,
+            "page":page,
+            "liste":liste
+        }
         
     async def get_fear_and_greed_from_json(self):
         with open('app/json/fearAndGreed/fearAndGreed.json', 'r') as f:
             data = f.read()
             return json.loads(data)
+    
+    async def search_crypto_by_text(self,text,page,quantity):
+        with open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
+            liste1 = json.load(f)
+        liste = []
+        liste = sorted(liste1, key=lambda x: x["market_cap"], reverse=True)
+        if text is not None:
+            liste = [item for item in liste1 if text.lower() in item["name"].lower()]
+        
+        quantite_de_donner = len(liste)
+        nombre_de_page = -(-len(liste) // quantity) 
+        liste = liste[(page-1)*quantity:page*quantity]
+        page = page
+        return {
+            "quantite_de_donner":quantite_de_donner,
+            "nombre_de_page":nombre_de_page,
+            "page":page,
+            "liste":liste
+        }
         
                 
         
