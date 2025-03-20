@@ -353,6 +353,18 @@ class CoinGeckoService:
     async def get_liste_crypto_with_weight(self):
         with open('app/json/liste_crypto/listeCryptoWithWeight.json', 'r', encoding='utf-8') as f:
             liste = json.load(f)
+        
+        liste_no_filter = await self.get_liste_crypto_nofilter()
+        liste_no_filter = liste_no_filter
+        
+        for el in liste:
+            for el2 in liste_no_filter:
+                if el['id'] == el2['id']:
+                    
+                    el['volume_24h'] = el2['volume_24h']
+                    # el['symbol'] = el2['symbol']
+                    break
+        
         return liste
                 
     async def set_liste_no_folter_to_json(self):
@@ -382,7 +394,7 @@ class CoinGeckoService:
         return liste_crypto
     
     async def get_liste_crypto_nofilter(self):
-        with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'r', encoding='utf-8') as f:
+        with open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
             liste = json.load(f)
         return liste
     
