@@ -48,7 +48,14 @@ class CallCoinMarketApi():
         
         return liste_stablecoins
     
-    def get_liste_symbole_by_id_categorie(self,id_Categorie):
+    async def set_liste_stabke_wrapped_tokens(self):
+        id_Stable_Coin = "604f2753ebccdd50cd175fc1"
+        id_Wrapped_Token = "6053df7b6be1bf5c15e865ed"
+        await self.set_liste_symbole_by_id_categorie(id_Stable_Coin,"stablecoins")
+        await self.set_liste_symbole_by_id_categorie(id_Wrapped_Token,"wrapped_tokens")
+        
+    
+    async def set_liste_symbole_by_id_categorie(self,id_Categorie,name = "stablecoins"):
         
         url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/category"
         params = {
@@ -68,12 +75,21 @@ class CallCoinMarketApi():
             # put symbol to lower case  
             liste_stablecoins.append(item.get("symbol").lower())
         
-        # put the liste symbole into csv
-        with open("app/csv/stablecoins/stablecoins.csv","w") as f:
-            for symbol in liste_stablecoins:
-                f.write(symbol + "\n")
+        # put the liste symbole into json
+        with open("app/json/other/"+name+".json", "w") as f:
+            json.dump(liste_stablecoins, f)
+        
         
         return liste_stablecoins
+    
+    async def get_stable_coins_from_json(self):
+        with open("app/json/other/stablecoins.json", "r") as f:
+            data = json.load(f)
+        return data
+    async def get_wrapped_tokens_from_json(self):
+        with open("app/json/other/wrapped_tokens.json", "r") as f:
+            data = json.load(f)
+        return data
     
     async def get_list_cryptos(self,limit = 5000,start = 1):
         

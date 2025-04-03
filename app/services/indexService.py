@@ -105,8 +105,13 @@ class IndexService:
         
         return graphe
     
-    async def get_liste_index_from_json_file(self,date_start,date_end):
+    async def get_liste_index_from_json_file(self,date_start = None,date_end = None):
         liste = []
+        if date_start is None:
+            date_start = "2025-02-18 09:19:33"
+        
+        if date_end is None:
+            date_end = time.strftime('%Y-%m-%d %H:%M:%S')
         with open('app/json/index/index.json', 'r') as f:
             data = json.load(f)
             for el in data:

@@ -1,22 +1,20 @@
+from app.services.cryptoService import CryptoService
 from app.services.coinGeckoService import CoinGeckoService
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+from fastapi import HTTPException
 coinGeckoService = CoinGeckoService()
-
+cryptoService = CryptoService()
 
 class VarService:
     def __init__(self):
         pass
     
     async def calculate_var(self,liste_price,liste_crypto,list_weight, percentile=1):
-        # liste_crypto= []
-        # liste_price = []
-        # list_weight= []
         merged = liste_price[0].rename(columns={'price': 'price_' + liste_crypto[0].get("id")})
-        # return liste_price,0
         for i in range(1, len(liste_price)):
         # Ensure the 'date' column in both DataFrames is in datetime format
             liste_price[i]['date'] = pd.to_datetime(liste_price[i]['date'])
@@ -100,7 +98,6 @@ class VarService:
         
     
     async def update_var(self):
-        
         # get last date frrom var.json
         with open('app/json/var/generale/var.json') as f:
             data = json.load(f)
@@ -176,6 +173,7 @@ class VarService:
                 data = data[-1]
                 return data.get("var")
         except FileNotFoundError:
+            return await self.calcul_var_one_crypto(id)
             raise ValueError("Crypto not found")
     
     async def calculate_var_v2(self,prices_list, crypto_names, percentile=1):
@@ -194,9 +192,9 @@ class VarService:
         
         return var_results
     
-    async def calcul_var_one_crypto(self, liste_prix,percentile=1):
+    async def calcul_var_one_crypto(self,id,percentile=1):
         # crypto_name = crypto_names[i].get("id")
-        
+        liste_prix = await cryptoService.get_liste_prix_from_json(id)
         # Calculer les rendements journaliers logarithmiques
         liste_prix['log_return'] = np.log(liste_prix['price'] / liste_prix['price'].shift(1))
         # Supprimer les valeurs NaN
@@ -205,48 +203,9 @@ class VarService:
         var_percentile = np.percentile(liste_prix['log_return'], percentile,method='lower')
         return var_percentile
     
-    # async def calulate_var_one_crypto(self, id, percentile=1):
-    #     prices = await coinGeckoService.get_historical_prices(id, "usd", 90)
-    #     var_results = {}
-    #     crypto_name = id
-    #     # Calculer les rendements journaliers logarithmiques
-    #     prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
-    #     # Supprimer les valeurs NaN
-    #     prices.dropna(inplace=True)
-    #     # Calcul de la VaR historique (sans interpolation)
-    #     var_percentile = np.percentile(prices['log_return'], percentile, method='lower')
-    #     var_results[crypto_name] = var_percentile
-        
-    #     # put it into json file
-    #     today = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    #     file_path = f"app/json/var/historique/{id}_var.json"
-    #     data = {
-    #         "date": today,
-    #         "var": var_percentile
-    #     }
-    #     data_list = []
-    #     if not os.path.exists(file_path) or os.stat(file_path).st_size == 0:
-    #         data_list = [data]  # Create a new list with the first entry
-    #     else:
-    #         with open(file_path, 'r', encoding='utf-8') as f:
-    #             try:
-    #                 data_list = json.load(f)
-    #                 if not isinstance(data_list, list):  # Ensure it's a list
-    #                     data_list = [data_list]
-    #             except json.JSONDecodeError:
-    #                 data_list = []  # Handle corrupt or empty files
-    #         data_list.append(data)  # Append the new entry
-
-    #     # Write updated data back to file
-    #     with open(file_path, 'w', encoding='utf-8') as f:
-    #         json.dump(data_list, f, indent=4, ensure_ascii=False)
-        
-    #     return var_results
-    
     async def update_var_v2(self):
         # get liste crypto
         liste_crypto = await coinGeckoService.get_liste_crypto_filtered()
-        # return liste_crypto
         # get liste price
         liste_price = []
         for el in liste_crypto:
@@ -255,11 +214,9 @@ class VarService:
             liste_price.append(historique)
         # calculate var
         liste_var = await self.calculate_var_v2(liste_price, liste_crypto, 1)
-        # return liste_var
         # save var to json
         today = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         for item in liste_crypto:
-            print(item.get('id'))
             file_path = f"app/json/var/historique/{item.get('id')}_var.json"
             data = {
                 "date": today,
@@ -283,4 +240,113 @@ class VarService:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data_list, f, indent=4, ensure_ascii=False)
         
+    async def set_historique_var_crypto(self, id):
+        # get liste price
+        liste_price = await coinGeckoService.get_historical_prices(id,"usd",90)
+        liste_price = liste_price[:-2]
+        liste_var = []
+        for i in range(0, len(liste_price)-2):
+            indice = len(liste_price) - i - 1
+            if indice < 3 :
+                break
+            subset_price = liste_price.iloc[:len(liste_price)-i]
+            var  = await self.calcul_var_with_price(subset_price)
+            data = {
+                "date": liste_price.loc[indice, "date"],
+                "var": var
+            }
+            liste_var.append(data)
+        # order liste_var by date croissant
+        liste_var = sorted(liste_var, key=lambda x: x.get("date"))
+            # write it in file
+        with open('app/json/var/historique/'+id+'_var.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_var, f, indent=4, ensure_ascii=False)
+        return liste_var
+            
+    
+    async def calcul_var_with_price(self,liste_prix,percentile=1):
+        liste_prix = liste_prix.copy() 
+        liste_prix['log_return'] = np.log(liste_prix['price'] / liste_prix['price'].shift(1))
+        # Supprimer les valeurs NaN
+        liste_prix.dropna(inplace=True)
+        # Calcul de la VaR historique (sans interpolation)
+        var_percentile = np.percentile(liste_prix['log_return'], percentile,method='lower')
+        return var_percentile
+    
+    async def get_var_historique_one_crypto(self,id,date_debut,date_fin = None):
+        try:
+            if date_fin is None:
+                date_fin = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+            
+            #  verif date_debut and date_fin
+            date_debut = datetime.strptime(date_debut, "%Y-%m-%dT%H:%M:%S.%f")
+            date_fin = datetime.strptime(date_fin, "%Y-%m-%dT%H:%M:%S.%f")
+            
+            if date_debut > date_fin:
+                raise HTTPException(status_code=400, detail="date_debut must be less than date_fin")
+            
+            val = await self.update_var_historique(id)
+            
+            retour = []
+            for item in val:
+                date = datetime.strptime(item.get("date"), "%Y-%m-%dT%H:%M:%S.%f")
+                if date >= date_debut and date <= date_fin:
+                    retour.append(item)
+            return retour
+        
+        except ValueError:
+            raise HTTPException(status_code=400, detail="date_debut and date_fin must have the format %Y-%m-%dT%H:%M:%S.%f")
+        
+        except FileNotFoundError:
+            val =  await self.set_historique_var_crypto(id)
+            retour = []
+            for item in val:
+                date = datetime.strptime(item.get("date"), "%Y-%m-%dT%H:%M:%S.%f")
+                if date >= date_debut and date <= date_fin:
+                    retour.append(item)
+            return retour
+    
+    async def read_var_historique_for_one_crypto(self,id):
+        try:
+            with open('app/json/var/historique/'+id+'_var.json') as f:
+                data = json.load(f)
+                return data
+        except FileNotFoundError:
+            return await self.set_historique_var_crypto(id)
+    
+    async def update_var_historique(self,id):
+        liste_var = await self.read_var_historique_for_one_crypto(id)
+        # get last date frrom var.json
+        last_date = liste_var[-1].get("date")
+        
+        # chech if format of last date is %Y-%m-%dT00:00:00.000 avec hours and minute and second zero
+        if last_date[-14:] != "T00:00:00.000":
+            liste_var = await self.set_historique_var_crypto(id)
+            return liste_var
+        
+        # get today date
+        today = datetime.now().strftime("%Y-%m-%dT00:00:00.000")
+        # calcul difference between last date and today
+        date_format = "%Y-%m-%dT00:00:00.000"
+        last_date = datetime.strptime(last_date, date_format)
+        today = datetime.strptime(today, date_format)
+        delta = today - last_date
+        delta = delta.days
+        if delta > 1:
+            liste_prix = await coinGeckoService.get_historical_prices(id,"usd",90)
+            liste_prix = liste_prix[:-2]
+            for i in range(delta-1):
+                var  = await self.calcul_var_with_price(liste_prix)
+                data = {
+                    "date": (last_date + timedelta(days=i+1)).strftime("%Y-%m-%dT00:00:00.000"),
+                    "var": var
+                }
+                liste_var.append(data)
+                liste_prix = liste_prix.iloc[:-1]
+        
+
+            with open('app/json/var/historique/'+id+'_var.json', 'w', encoding='utf-8') as f:
+                json.dump(liste_var, f, indent=4, ensure_ascii=False)
+        
+        return liste_var
         

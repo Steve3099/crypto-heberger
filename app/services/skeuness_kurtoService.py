@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import pandas as pd
 from scipy.stats import skew, kurtosis
 
 from app.services.coinGeckoService import CoinGeckoService
@@ -31,8 +32,41 @@ class Skewness_KurtoService:
             else:
                 pass
                 # print(f"Pas assez de rendements pour {crypto_name}, skewness et kurtosis non calculés.")
+    
+    # verif if skewness and kurtosis are already calculated
+    async def check_skewness_kurtosis(self, crypto_id):
+        try:
+            with open('app/json/crypto/skewness_kurtosis/'+crypto_id+'_skewness_kurtosis.json', 'r') as f:
+                data = f.read()
+                return json.loads(data)
+        except FileNotFoundError:
+            return None
+    
+    async def calculate_skewness_kurtosis_one_crypto(self, prices, crypto_name):
+        # crypto_name = crypto_names[i].get("id")
         
+        # verif if skewness and kurtosis are already calculated
+        # if await self.check_skewness_kurtosis(crypto_name):
+        #     return await self.check_skewness_kurtosis(crypto_name)
         
+            # Calculer les rendements journaliers logarithmiques
+       # Create DataFrame from the dictionary
+        prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
+        # Supprimer les valeurs NaN
+        prices.dropna(inplace=True)
+        
+        # Vérifier qu'il y a assez de données pour les calculs
+        if len(prices['log_return']) > 1:  # Nécessite au moins 2 rendements
+            # print(f"Calcul du skewness et du kurtosis pour {crypto_name}")
+            # Calcul du skewness et du kurtosis
+            skew_value = skew(prices['log_return'])
+            kurt_value = kurtosis(prices['log_return'], fisher=True)  # Kurtosis normalisée (0 pour une normale)
+            temp = {'skewness': skew_value, 'kurtosis': kurt_value}
+            # set skewness and kurtosis itno json file
+            with open('app/json/crypto/skewness_kurtosis/'+crypto_name+'_skewness_kurtosis.json', 'w') as f:
+                json.dump(temp, f, indent=4, ensure_ascii=False)
+            
+            return temp
     
     async def set_skewness_kurto(self):
         
@@ -60,5 +94,9 @@ class Skewness_KurtoService:
                 data = f.read()
                 return json.loads(data)
         except FileNotFoundError:
+            print("here")
+            df = await coinGeckoService.get_historical_prices(crypto = id, days =90)
+            
+            return await self.calculate_skewness_kurtosis_one_crypto(id,df)
             return {"skewness":None, "kurtosis":None}
         

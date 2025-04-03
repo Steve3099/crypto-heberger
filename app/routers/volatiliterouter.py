@@ -33,13 +33,13 @@ async def get_Data_volatilite_one_crypto(id):
     volatiliteAnuel = volatiliteJ * np.sqrt(365)
     
     volatiliteJ2 = historique_volatilite[-2]["value"]
-    variationJ1 = (volatiliteJ2 - volatiliteJ) / volatiliteJ2
+    variationJ1 = (volatiliteJ - volatiliteJ2) -1
     
     volatiliteJ7 = historique_volatilite[-8]["value"]
-    variationJ7 = (volatiliteJ7 - volatiliteJ) / volatiliteJ7
+    variationJ7 = (volatiliteJ - volatiliteJ7)-1
     
     volatiliteMois = historique_volatilite[-31]["value"]
-    variationMois = (volatiliteMois - volatiliteJ) / volatiliteMois
+    variationMois = (volatiliteJ - volatiliteMois) -1
     
     retour = {
             "id":id,

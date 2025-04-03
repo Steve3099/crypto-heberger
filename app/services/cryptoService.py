@@ -191,7 +191,7 @@ class CryptoService:
         liste = sorted(liste1, key=lambda x: x["market_cap"], reverse=True)
         
         # get the page
-        quantite_de_donner = len(liste)
+        quantite_de_donnees = len(liste)
         # round up
         
         nombre_de_page = -(-len(liste) // quantity) 
@@ -199,7 +199,7 @@ class CryptoService:
         
         page = page
         return {
-            "quantite_de_donner":quantite_de_donner,
+            "quantite_de_donnees":quantite_de_donnees,
             "nombre_de_page":nombre_de_page,
             "page":page,
             "liste":liste
@@ -216,19 +216,49 @@ class CryptoService:
         liste = []
         liste = sorted(liste1, key=lambda x: x["market_cap"], reverse=True)
         if text is not None:
-            liste = [item for item in liste1 if text.lower() in item["name"].lower()]
+            liste = [item for item in liste1 if text.lower() in item["name"].lower() or text.lower() in item["symbol"].lower()]
         
-        quantite_de_donner = len(liste)
+        quantite_de_donnees = len(liste)
         nombre_de_page = -(-len(liste) // quantity) 
         liste = liste[(page-1)*quantity:page*quantity]
         page = page
         return {
-            "quantite_de_donner":quantite_de_donner,
+            "quantite_de_donnees":quantite_de_donnees,
             "nombre_de_page":nombre_de_page,
             "page":page,
             "liste":liste
         }
         
-                
+    async def set_historique_volume_generale(self):
+        liste_crypto = await self.get_liste_crypto_from_json()
+        liste_market_cap_history = []
+        somme_market_cap=0
+        liste_crypto_used = []
+        for crypto in liste_crypto:
+            with open('app/json/crypto/volume/'+crypto["id"]+'_volume.json', 'r') as f:
+                data = f.read()
+                liste = json.loads(data)
+                if len(liste) < 90:
+                    continue
+                liste_crypto_used.append(crypto)
+                liste_market_cap_history.append(liste)
+        liste_somme_arket_cap = []
+        for i in range(len(liste_market_cap_history[0])):
+            market_cap =0
+            for j in range(len(liste_crypto_used)):
+                market_cap += liste_market_cap_history[j][i]["volume"]
+            data = {
+                "date":liste_market_cap_history[0][i]["date"],
+                "volume":market_cap
+            }
+            # do not add if hh:mm:ss is not 00:00:00
+            if data["date"].split("T")[1] != "00:00:00.000":
+                continue
+            liste_somme_arket_cap.append(data)
+        with open('app/json/crypto/market_cap/generale/historique_market_cap_generale.json', 'w') as f:
+            json.dump(liste_somme_arket_cap, f, indent=4, ensure_ascii=False)
+            # f.write(json.dumps(liste_somme_arket_cap))
+        
+        return "market_cap generale done"            
         
         

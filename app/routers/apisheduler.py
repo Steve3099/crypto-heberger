@@ -133,3 +133,20 @@ async def get_list_cryptos():
 async def set_fear_and_greed():
     await callCoinMArketApi.getFearAndGreed()
     return "fear and greed done"
+
+@apisheduler.get('/sheduler/set_historique_var_crypto')
+async def set_historique_var_crypto(id):
+    return await varService.set_historique_var_crypto(id)
+    # return {"message":"var done"}
+    
+# set_historique_volume_generale
+@apisheduler.get('/sheduler/set_historique_volume_generale')
+async def set_historique_volume_generale():
+    return await cryptoService.set_historique_volume_generale()
+    # return {"message":"var done"}
+
+#set stabel and wrapped coin
+@apisheduler.get('/sheduler/set_stable_and_wrapped_coin')
+async def set_stable_and_wrapped_coin():
+    await callCoinMArketApi.set_liste_stabke_wrapped_tokens()
+    return {"message":"stable and wrapped coins done"}

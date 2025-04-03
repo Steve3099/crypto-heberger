@@ -75,8 +75,8 @@ class CoinGeckoService:
         # List of known stablecoin symbols to exclude
         id_Stable_Coin = "604f2753ebccdd50cd175fc1"
         id_Wrapped_Token = "6053df7b6be1bf5c15e865ed"
-        stablecoins = coinMarketApi.get_liste_symbole_by_id_categorie(id_Stable_Coin)
-        wrapped_tokens = coinMarketApi.get_liste_symbole_by_id_categorie(id_Wrapped_Token)
+        stablecoins = coinMarketApi.get_stable_coins_from_json()
+        wrapped_tokens = coinMarketApi.get_wrapped_tokens_from_json()
         
         filtered = [coin for coin in data if 
                     coin["symbol"].lower() not in stablecoins and 
@@ -123,7 +123,7 @@ class CoinGeckoService:
             }
             headers = {
                 "accept": "application/json",
-                "x-cg-demo-api-key": 'CG-pq44GDj1HKecURw2UA1uUYz8'
+                "x-cg-demo-api-key": key
             }
             response = requests.get(url, headers=headers, params=params)
             data = response.json()
@@ -137,40 +137,31 @@ class CoinGeckoService:
                 f.write(df.to_json(date_format="iso", orient="records", indent=4))
             
             return df[['date', 'price']]
-
-    def getListeCryptoWithWeight(self, listeCrypto):
-
-        # Augmenter la précision des calculs pour réduire les erreurs
-        getcontext().prec = 28  
-
-        listeRetour = []
-        somme = Decimal(0)
-
-        # Calculer la somme totale de la capitalisation boursière
-        for el in listeCrypto:
-            somme += Decimal(el.get("current_price", "")) * Decimal(el.get("circulating_supply", ""))
-
-        # Calculer les poids bruts sans les arrondir
-        poids_bruts = []
-        for el in listeCrypto:
-            poids_brut = (Decimal(el.get("current_price", "")) * Decimal(el.get("circulating_supply", ""))) / somme * 100
-            poids_bruts.append(poids_brut)
-            el["weight"] = poids_brut  # Stockage temporaire sans arrondi
-            listeRetour.append(el)
-
-        # Calcul de l'erreur cumulée d'arrondi
-        somme_arrondie = Decimal(0)
-        for el in listeRetour:
-            el["weight"] = round(el["weight"], 2)
-            somme_arrondie += el["weight"]
-
-        # Redistribution proportionnelle de l'erreur
-        erreur_totale = Decimal(100) - somme_arrondie
-        sommett = 0
-        for el in listeRetour:
-            el["weight"] += round(el["weight"] / somme_arrondie * erreur_totale, 2)
-            sommett += el["weight"]
-        return listeRetour
+        
+    async def get_prix_one_crypto(self,crypto,intervale = "",vs_currency="usd",days=90):
+        url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+        params = {
+            'vs_currency': vs_currency,
+            'days': days,
+            'interval': intervale
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+        response = requests.get(url, headers=headers, params=params)
+        print(response)
+        data = response.json()
+        prices = data['prices']
+        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+        df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df['price'] = df['price'].round(2)
+        
+        # put historique on json file dans un fichier json
+        # with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
+        #     f.write(df.to_json(date_format="iso", orient="records", indent=4))
+        
+        return df[['date', 'price']]
     
     async def get_market_cap(self,crypto):
         
@@ -243,7 +234,9 @@ class CoinGeckoService:
         # print(os.environ)
         # print(key)
         # return key
+        
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+        print(url)
         params = {
             'vs_currency': vs_currency,
             'days': days,
@@ -265,12 +258,19 @@ class CoinGeckoService:
         lf['date'] = pd.to_datetime(lf['timestamp'], unit='ms')
         lf['market_cap'] = lf['market_cap'].round(2)
         
+        volume = pd.DataFrame(data['total_volumes'], columns=['timestamp', 'volume'])
+        volume['date'] = pd.to_datetime(volume['timestamp'], unit='ms')
+        volume['volume'] = volume['volume'].round(2)
+        
         # put historique on json file dans un fichier json
         with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
             f.write(df.to_json(date_format="iso", orient="records", indent=4))
         
         with open('app/json/crypto/market_cap/'+crypto+'_market_cap.json', 'w') as f:
             f.write(lf.to_json(date_format="iso", orient="records", indent=4))
+            
+        with open('app/json/crypto/volume/'+crypto+'_volume.json', 'w') as f:
+            f.write(volume.to_json(date_format="iso", orient="records", indent=4))
     
     async def set_market_cap_to_json(self,crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
@@ -294,6 +294,7 @@ class CoinGeckoService:
         liste_crypto = await self.get_liste_crypto_filtered()
         liste_crypto = liste_crypto[:100]
         for i in range(0,len(liste_crypto)):
+            
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
             

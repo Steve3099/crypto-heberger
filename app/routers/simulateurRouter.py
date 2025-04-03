@@ -15,6 +15,11 @@ class VolatiliteRequest(BaseModel):
 
 class SimulerVarRequest(BaseModel):
     valeur: float
+    
+class CryptoSimulationRequest(BaseModel):
+    id: str
+    periode: int = 90
+    nombre_simulation: int = 20
 
 @simulateurRouter.post("/simulate_volatility/{id}")
 async def simuler_volatilite(id: str, request: VolatiliteRequest):
@@ -23,3 +28,9 @@ async def simuler_volatilite(id: str, request: VolatiliteRequest):
 @simulateurRouter.post("/simulate_var/{id}")
 async def simuler_var(id: str, request: SimulerVarRequest):
     return await simulateurService.simulateur_var(id, request.valeur)
+
+@simulateurRouter.post("/simulate_crypto_price")
+async def simulate_crypto_price(request: CryptoSimulationRequest):
+    return await simulateurService.run_similation_cupro_price(
+        request.id, request.periode, request.nombre_simulation
+    )

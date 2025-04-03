@@ -221,8 +221,21 @@ class VolatiliteService:
                     }
                     historique_volatilite_crypto.append(temp)
                 # Write historique_volatilite_crypto to JSON file
+                
+                # detelte duplicate date in historique_volatilite_crypto
+                historique_volatilite_crypto = await self.delete_duplicate_date(historique_volatilite_crypto)
+                
                 with open('app/json/volatilite/'+el.get("id")+'_volatilite.json', 'w', encoding='utf-8') as f:
                     json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
+    
+    async def delete_duplicate_date(self,liste):
+        liste_date = []
+        liste_temp = []
+        for el in liste:
+            if el["date"] not in liste_date:
+                liste_date.append(el["date"])
+                liste_temp.append(el)
+        return liste_temp
     
     async def update_historique_volatilite_for_one_crypto(self,id):
         # check if file exist
@@ -236,6 +249,7 @@ class VolatiliteService:
             # check if f is not null
             if f is None:
                 historique_volatilite = await self.get_historique_Volatilite(historique)
+                historique_volatilite = await self.delete_duplicate_date(historique_volatilite)
             # liste_historique.append(historique_volatilite)
                 historique_volatilite_crypto = []
                 for i in range(1,len(historique[:-2])):
@@ -245,6 +259,7 @@ class VolatiliteService:
                         "value": historique_volatilite[-i]
                     }
                     historique_volatilite_crypto.append(temp)
+                historique_volatilite_crypto = await self.delete_duplicate_date(historique_volatilite_crypto)
                 # Write historique_volatilite_crypto to JSON file
                 with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
                     json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
@@ -282,12 +297,15 @@ class VolatiliteService:
             with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
                 data = json.load(f)
                 data += liste_volatilite
+                data = await self.delete_duplicate_date(data)
             with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
             return data
     async def update_historique_volatilite_for_each_crypto(self):
+        
         vs_currency="usd"
         liste_crypto_start = await coinGeckoService.get_liste_crypto_filtered()
+        
         # date now
         now = datetime.now()
         
@@ -322,6 +340,7 @@ class VolatiliteService:
                     data = historique_volatilite_crypto
                 else:
                     data = json.load(f)
+                    data = await self.delete_duplicate_date(data)
                 
             # get the last element
             last_element = data[-1]
@@ -344,7 +363,7 @@ class VolatiliteService:
                 liste_volatilite = []
                 for i in range(0, len(listeVolatilite)):  
                     temp = {
-                        "date": historique["date"][len(historique[:-2])-difference+i+1],
+                        "date": (datetime.now() - pd.Timedelta(days=difference-i-1)).strftime("%Y-%m-%dT%H:%M:%S.%f"),
                         "value": listeVolatilite[-i-1]
                     }
                     liste_volatilite.append(temp)
@@ -353,6 +372,7 @@ class VolatiliteService:
                 with open('app/json/volatilite/'+el.get("id")+'_volatilite.json', 'r') as f:
                     data = json.load(f)
                     data += liste_volatilite
+                    data = await self.delete_duplicate_date(data)
                 with open('app/json/volatilite/'+el.get("id")+'_volatilite.json', 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
                     

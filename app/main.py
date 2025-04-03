@@ -4,6 +4,7 @@ from app.routers.apisheduler import apisheduler
 from app.routers.volatiliterouter import volatiliterouter
 from app.routers.varRouter import varrouter
 from app.routers.simulateurRouter import simulateurRouter
+from app.routers.betaRouter import betarouter
 from fastapi.middleware.cors import CORSMiddleware
 import app.scheduler as scheduler
 
@@ -27,3 +28,4 @@ app.include_router(apisheduler)
 app.include_router(volatiliterouter)
 app.include_router(varrouter)
 app.include_router(simulateurRouter)
+app.include_router(betarouter)

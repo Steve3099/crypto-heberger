@@ -1,2 +1,19 @@
 venv\Scripts\activate
 uvicorn app.main:app --reload
+
+ssh root@82.112.255.67
+helloFromMinecraft2#
+scp -r C:\Asa\Crypto\crypto-heberger\crypto-heberger root@82.112.255.67:~/crypto_python_api/
+scp -r C:/Asa/Crypto/crypto-heberger/crypto-heberger root@82.112.255.67:~/crypto_python_api
+
+CD
+python3 -m venv venvpython
+source venv/bin/activate 
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > test.log 2>&1
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' > test.log
+
+
+ping -c 4 google.com
