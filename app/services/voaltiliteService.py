@@ -249,7 +249,7 @@ class VolatiliteService:
             # check if f is not null
             if f is None:
                 historique_volatilite = await self.get_historique_Volatilite(historique)
-                historique_volatilite = await self.delete_duplicate_date(historique_volatilite)
+                #historique_volatilite = await self.delete_duplicate_date(historique_volatilite)
             # liste_historique.append(historique_volatilite)
                 historique_volatilite_crypto = []
                 for i in range(1,len(historique[:-2])):
@@ -266,7 +266,6 @@ class VolatiliteService:
                 data = historique_volatilite_crypto
             else:
                 data = json.load(f)
-            
         # get the last element
         last_element = data[-1]
         now = datetime.now()
@@ -300,7 +299,7 @@ class VolatiliteService:
                 data = await self.delete_duplicate_date(data)
             with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
-            return data
+        return data
     async def update_historique_volatilite_for_each_crypto(self):
         
         vs_currency="usd"
@@ -383,6 +382,11 @@ class VolatiliteService:
         today = datetime.now().date()
         try:
             with open('app/json/volatilite/'+id+'_volatilite.json', 'r') as f:
+                if f is None:
+                    raise FileNotFoundError("File not found")
+                # check if the file is empty
+                if f.readable() == False:
+                    raise FileNotFoundError("File not found")
                 data = json.load(f)
                 liste = []
                 # get last date
@@ -390,6 +394,8 @@ class VolatiliteService:
                 # check if the diference between last date and today is greater than 2 days
                 last_date = datetime.strptime(last_date, '%Y-%m-%dT%H:%M:%S.%f').date()
                 difference = today - last_date
+                # return data
+                #print(difference.days)
                 if difference.days >= 2:
                     data = await self.update_historique_volatilite_for_one_crypto(id)
                 for el in data:
@@ -425,13 +431,14 @@ class VolatiliteService:
             for i in range(1,len(historique[:-2])):
                 
                 temp = {
-                    "date": historique["date"][i],
+                    "date": str(historique["date"][i]),
                     "value": historique_volatilite[-i]
                 }
                 historique_volatilite_crypto.append(temp)
             # Write historique_volatilite_crypto to JSON file or create the file if it doesn't exist
             with open('app/json/volatilite/'+id+'_volatilite.json', 'w', encoding='utf-8') as f:
                 json.dump(historique_volatilite_crypto, f, indent=4, ensure_ascii=False)
+            return historique_volatilite_crypto
         else:
             raise HTTPException(status_code=403, detail=f"crypto trop jeune pour avoir un historique de volatilité")
     async def get_top_10_volatilite_crypto(self):

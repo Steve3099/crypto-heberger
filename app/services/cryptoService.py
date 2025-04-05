@@ -142,6 +142,55 @@ class CryptoService:
         
         return "market_cap generale done"
     
+    async def set_historique_volume_generale(self):
+        liste_crypto = await self.get_liste_crypto_from_json()
+        liste_volume_history = []
+        somme_market_cap=0
+        liste_crypto_used = []
+        for crypto in liste_crypto:
+            with open('app/json/crypto/volume/'+crypto["id"]+'_volume.json', 'r') as f:
+                data = f.read()
+                liste = json.loads(data)
+                if len(liste) < 90:
+                    continue
+                liste_crypto_used.append(crypto)
+                liste_volume_history.append(liste)
+        liste_somme_volume = []
+        print(len(liste_crypto_used))
+        for i in range(len(liste_volume_history[0])):
+            volume =0
+            for j in range(len(liste_crypto_used)):
+                volume += liste_volume_history[j][i]["volume"]
+            data = {
+                "date":liste_volume_history[0][i]["date"],
+                "volume":volume
+            }
+            # do not add if hh:mm:ss is not 00:00:00
+            if data["date"].split("T")[1] != "00:00:00.000":
+                continue
+            liste_somme_volume.append(data)
+        with open('app/json/crypto/volume/generale/historique_volume_generale.json', 'w') as f:
+            json.dump(liste_somme_volume, f, indent=4, ensure_ascii=False)
+            # f.write(json.dumps(liste_somme_arket_cap))
+        
+        return "market_cap generale done"
+    
+    async def get_volume_generale_between_2_date(self,date_start,date_end):
+        if date_end is None:
+            date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
+            
+        if date_start > date_end:
+            raise HTTPException(status_code=400, detail="date_start should be less than date_end")
+        
+        with open('app/json/crypto/volume/generale/historique_volume_generale.json', 'r') as f:
+            data = f.read()
+            liste = json.loads(data)
+            liste_volume = []
+            for item in liste:
+                if item["date"] >= date_start and item["date"] <= date_end:
+                    liste_volume.append(item)
+            
+            return liste_volume
     async def get_marketcap_generale_between_2_date(self,date_start,date_end):
         if date_end is None:
             date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")

@@ -178,10 +178,11 @@ class VarService:
     
     async def calculate_var_v2(self,prices_list, crypto_names, percentile=1):
         var_results = {}
-    
+        
         for i, prices in enumerate(prices_list):
+            print(len(prices))
             crypto_name = crypto_names[i].get("id")
-            
+            print(crypto_name)
             # Calculer les rendements journaliers logarithmiques
             prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
             # Supprimer les valeurs NaN
@@ -208,15 +209,17 @@ class VarService:
         liste_crypto = await coinGeckoService.get_liste_crypto_filtered()
         # get liste price
         liste_price = []
+        liste_crypto_used = []
         for el in liste_crypto:
             historique = await coinGeckoService.get_historical_prices(el.get('id'),"usd",90)
-            # if len(historique) > 90:
-            liste_price.append(historique)
+            if len(historique) > 5:
+                liste_price.append(historique)
+                liste_crypto_used.append(el)
         # calculate var
-        liste_var = await self.calculate_var_v2(liste_price, liste_crypto, 1)
+        liste_var = await self.calculate_var_v2(liste_price, liste_crypto_used, 1)
         # save var to json
         today = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        for item in liste_crypto:
+        for item in liste_crypto_used:
             file_path = f"app/json/var/historique/{item.get('id')}_var.json"
             data = {
                 "date": today,

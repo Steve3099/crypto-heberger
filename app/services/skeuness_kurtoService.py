@@ -43,14 +43,6 @@ class Skewness_KurtoService:
             return None
     
     async def calculate_skewness_kurtosis_one_crypto(self, prices, crypto_name):
-        # crypto_name = crypto_names[i].get("id")
-        
-        # verif if skewness and kurtosis are already calculated
-        # if await self.check_skewness_kurtosis(crypto_name):
-        #     return await self.check_skewness_kurtosis(crypto_name)
-        
-            # Calculer les rendements journaliers logarithmiques
-       # Create DataFrame from the dictionary
         prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
         # Supprimer les valeurs NaN
         prices.dropna(inplace=True)
@@ -94,9 +86,8 @@ class Skewness_KurtoService:
                 data = f.read()
                 return json.loads(data)
         except FileNotFoundError:
-            print("here")
             df = await coinGeckoService.get_historical_prices(crypto = id, days =90)
             
-            return await self.calculate_skewness_kurtosis_one_crypto(id,df)
+            return await self.calculate_skewness_kurtosis_one_crypto(df,id)
             return {"skewness":None, "kurtosis":None}
         

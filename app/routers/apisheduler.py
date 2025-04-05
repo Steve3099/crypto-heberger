@@ -77,6 +77,8 @@ async def action():
     await set_liste_crypto_with_weight()
     await set_var()
     await cryptoService.set_info_crypto()
+    await set_historique_market_cap_generale()
+    await set_historique_volume_generale()
     return {"message":"action done"}
 
 @apisheduler.get('/sheduler/set_info_crypto')
@@ -150,3 +152,9 @@ async def set_historique_volume_generale():
 async def set_stable_and_wrapped_coin():
     await callCoinMArketApi.set_liste_stabke_wrapped_tokens()
     return {"message":"stable and wrapped coins done"}
+
+# set volume generale historique
+@apisheduler.get('/sheduler/set_volume_generale_historique')
+async def set_volume_generale_historique():
+    await cryptoService.set_historique_volume_generale()
+    return {"message":"volume generale done"}
