@@ -200,5 +200,5 @@ async def search_crypto(search: str,page: int = 1,quantity: int = 50):
 
 @cryptorouter.get("/global_data")
 async def get_global_data():
-    return await coinGeckoService.get_global_data()
+    return await coinGeckoService.get_global_data_from_json()
 

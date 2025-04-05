@@ -162,5 +162,5 @@ async def set_volume_generale_historique():
 #set_global_data_to_json
 @apisheduler.get('/sheduler/set_global_data_to_json')
 async def set_global_data_to_json():
-    await coinGeckoService.set_global_data_to_json()
+    return await coinGeckoService.set_global_data_to_json()
     return {"message":"global data done"}

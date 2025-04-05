@@ -445,7 +445,7 @@ class CoinGeckoService:
         with open('app/json/global_data/global_data.json', 'w') as f:
             json.dump(existing_data, f, indent=4)
     
-    async def get_global_data(self):
+    async def get_global_data_from_json(self):
         with open('app/json/global_data/global_data.json', 'r') as f:
             existing_data = json.load(f)
             return existing_data
