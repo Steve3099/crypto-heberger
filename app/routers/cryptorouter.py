@@ -198,3 +198,7 @@ async def get_skewness_kurtosis(id: str):
 async def search_crypto(search: str,page: int = 1,quantity: int = 50):
     return await cryptoService.search_crypto_by_text(search,page,quantity)
 
+@cryptorouter.get("/global_data")
+async def get_global_data():
+    return await coinGeckoService.get_global_data()
+
