@@ -412,4 +412,36 @@ class CoinGeckoService:
             liste = json.load(f)
         return liste
     
+    async def get_global_data(self):
+        url = "https://api.coingecko.com/api/v3/global"
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+        response = requests.get(url, headers=headers)
+        data = json.loads(response.text)
+        
+        return data
+    
+    
+    async def set_global_data_to_json(self):
+        data = await self.get_global_data()
+        market_cap = data['data']['total_market_cap']['usd']
+        volume = data['data']['total_volume']['usd']
+        
+        # put global data in json with date
+        global_data = {
+            "date": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "market_cap": market_cap,
+            "volume": volume
+        }
+        # add global data to the botton of json file
+        try:
+            with open('app/json/global_data/global_data.json', 'r') as f:
+                existing_data = json.load(f)
+        except FileNotFoundError:
+            existing_data = []
+        existing_data.append(global_data)
+        with open('app/json/global_data/global_data.json', 'w') as f:
+            json.dump(existing_data, f, indent=4)
     

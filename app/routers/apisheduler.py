@@ -158,3 +158,9 @@ async def set_stable_and_wrapped_coin():
 async def set_volume_generale_historique():
     await cryptoService.set_historique_volume_generale()
     return {"message":"volume generale done"}
+
+#set_global_data_to_json
+@apisheduler.get('/sheduler/set_global_data_to_json')
+async def set_global_data_to_json():
+    await coinGeckoService.set_global_data_to_json()
+    return {"message":"global data done"}
