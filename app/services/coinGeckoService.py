@@ -387,8 +387,6 @@ class CoinGeckoService:
         while i <= 61:
             try:
                 temp = await self.get_liste_crypto_no_filtre(page=i)
-                print("page " + str(i)   )
-                print("temp " + str(len(temp)))
                 if len(temp) > 0 or temp != None:
                     liste_crypto += temp
                     i += 1

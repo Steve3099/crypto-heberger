@@ -1,4 +1,5 @@
 import json
+import os
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from fastapi import HTTPException
@@ -331,8 +332,12 @@ class CryptoService:
         #put data to botome of json file
         data = []
         try:
-            with open('app/json/crypto/prix/'+crypto["id"]+'_prix.json', 'r') as f:
-                data = json.load(f)
+            file_path = f'app/json/crypto/prix/{crypto["id"]}_prix.json'
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            else:
+                data = []
                 
         except FileNotFoundError:
             # write to json file
@@ -350,7 +355,9 @@ class CryptoService:
         for item in liste_crypto_nofilter:
             await self.refresh_price_one_crypto(item,liste_crypto)
         print("crypto price updated")
-                
+        
+        with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_crypto_nofilter, f, indent=4, ensure_ascii=False)
     
             
             
