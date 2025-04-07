@@ -16,9 +16,6 @@ class VolatiliteService:
     async def set_historique_volatilite(self):
         vs_currency="usd"
         liste_crypto_start = await coinGeckoService.get_liste_crypto_filtered()
-        # liste_crypto_start = liste_crypto_start[:80]
-        # liste_crypto_start = liste_crypto_start[250:252]
-        # get liste de prix
         
         liste_crypto = []
         liste_prix = []
@@ -55,9 +52,6 @@ class VolatiliteService:
             
         # put together adate liste_pirx avec la liste_volatilite_portefeuille in json folder
         liste_volatilite = []
-
-        # Ensure liste_volatilite_portefeuille is defined before using it
-        # return liste_prix[0]
         
         for i in range(0, len(liste_volatilite_portefeuille)):  
             temp = {
