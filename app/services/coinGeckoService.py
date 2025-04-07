@@ -248,7 +248,6 @@ class CoinGeckoService:
         # return key
         
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
-        print(url)
         params = {
             'vs_currency': vs_currency,
             'days': days,
@@ -425,6 +424,7 @@ class CoinGeckoService:
     
     
     async def set_global_data_to_json(self):
+        print("set global data to json")
         data = await self.get_global_data()
         market_cap = data['data']['total_market_cap']['usd']
         volume = data['data']['total_volume']['usd']
@@ -449,4 +449,19 @@ class CoinGeckoService:
         with open('app/json/global_data/global_data.json', 'r') as f:
             existing_data = json.load(f)
             return existing_data
+        
+    async def get_last_Data(self,id):
+        print(id)
+        url = f'https://api.coingecko.com/api/v3/simple/price'
+        params = {
+            'ids': id,
+            'vs_currencies': 'usd',
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key
+        }
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()
+        return data.get(id).get("usd")
     

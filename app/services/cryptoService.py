@@ -223,7 +223,7 @@ class CryptoService:
         for item in liste_coin_getcko:
             for item2 in liste_coin_market_cap:
                 # ignore case in comparaison majuscule/minuscule
-                if item["name"].lower() == item2["name"].lower():
+                if item["name"].lower() == item2["name"].lower() or item["symbol"].lower() == item2["symbol"].lower():
                     item["volume_24h"] = item2["volume_24h"]
                     liste_crypto.append(item)
                     # await self.set_info_one_crypto(item["id"],item)
@@ -308,6 +308,50 @@ class CryptoService:
             json.dump(liste_somme_arket_cap, f, indent=4, ensure_ascii=False)
             # f.write(json.dumps(liste_somme_arket_cap))
         
-        return "market_cap generale done"            
+        return "market_cap generale done"
+    
+    async def refresh_price_one_crypto(self,crypto,liste_crypto_nofilter):
+        new_data = {}
+        price = -1
+        val = 0
+        for item in liste_crypto_nofilter:
+            if crypto["name"].lower() == item["name"].lower() or crypto["symbol"].lower() == item["symbol"].lower():
+                crypto["current_price"] = item["current_price"]
+                price = item["current_price"]
+                break
         
+        if price <= 0:
+            val += 1
+            price = await coinGeckoService.get_last_Data(crypto["id"])
+        
+        new_data = {
+            "data": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "price": price
+        }
+        #put data to botome of json file
+        data = []
+        try:
+            with open('app/json/crypto/prix/'+crypto["id"]+'_prix.json', 'r') as f:
+                data = json.load(f)
+                
+        except FileNotFoundError:
+            # write to json file
+            data =[]
+        data.append(new_data)
+        with open('app/json/crypto/prix/'+crypto["id"]+'_prix.json', 'w') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        return val
+    async def refresh_price_crypto(self):
+        liste_crypto = await callCoinMarketApi.get_liste_cypto_ufiltered()
+        
+        liste_crypto_nofilter = await self.get_liste_crypto_nofilter(1,15000)
+        
+        liste_crypto_nofilter = liste_crypto_nofilter["liste"]
+        for item in liste_crypto_nofilter:
+            await self.refresh_price_one_crypto(item,liste_crypto)
+        print("crypto price updated")
+                
+    
+            
+            
         

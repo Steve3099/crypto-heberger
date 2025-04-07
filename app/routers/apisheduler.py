@@ -113,7 +113,7 @@ async def set_historique_volatilite_for_one_crypto(id):
 async def set_historique_prix_for_one_crypto(id):
     ids = [id]
     for id in ids:
-        await coinGeckoService.set_historical_price_to_json(id)
+        return await coinGeckoService.set_historical_price_to_json(id)
     # return await coinGeckoService.set_historical_price_to_json(id)
     # return {"message":"var done"}
     
@@ -164,3 +164,9 @@ async def set_volume_generale_historique():
 async def set_global_data_to_json():
     return await coinGeckoService.set_global_data_to_json()
     return {"message":"global data done"}
+
+# refresh price crypto
+@apisheduler.get('/sheduler/refresh_price_crypto')
+async def refresh_price_crypto():
+    await cryptoService.refresh_price_crypto()
+    return {"message":"refresh price crypto done"}
