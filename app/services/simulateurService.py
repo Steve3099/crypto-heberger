@@ -67,15 +67,18 @@ class SimulateurService:
         
         dt = T / n  # Incrément de temps
         time_steps = n  # Nombre de pas de temps
-        
         price_paths = np.zeros((time_steps, n_simulations))  # Stocke les trajectoires
+        price_paths[0, :] = S0
+
         for i in range(n_simulations):
             W = np.random.normal(0, np.sqrt(dt), time_steps)  # Bruit Brownien
             W = np.cumsum(W)  # Processus de Wiener
             t = np.linspace(0, T, time_steps)
-            price_paths[:, i] = S0 * np.exp((mu - 0.5 * sigma**2) * t + sigma * W)
+
+            price_paths[1:, i] = S0 * np.exp((mu - 0.5 * sigma**2) * t[1:] + sigma * W[1:])
         
         return price_paths
+
     
     async def calcul_Volatillite_Journaliere_one_crypto(self,listePrix):
         
