@@ -37,7 +37,18 @@ class CryptoService:
         raise HTTPException(status_code=404, detail=f"Crypto with ID '{id}' not found")
     
     async def get_liste_prix_from_json(self,id):
-        return await coinGeckoService.get_historical_prices(id)
+        with open('app/json/crypto/prix/'+id+'_prix.json', 'r') as f:
+            data = f.read()
+            # return as a json
+            
+            liste = json.loads(data)
+            # return liste
+            liste_prix = []
+            for item in liste:
+                liste_prix.append(item)
+            
+            return liste_prix
+        # return await coinGeckoService.get_historical_prices(id)
     
     async def get_liste_prix_between_2_dates(self,id,date_start,date_end):
         if date_end is None:
@@ -45,15 +56,19 @@ class CryptoService:
         if date_start > date_end:
             raise HTTPException(status_code=400, detail="date_start should be less than date_end")
         liste = await self.get_liste_prix_from_json(id)
-        # transform liste which is a data frame to json
         
-        # transform liste which is a dictionary to a list of dictionaries
-        liste = [{"date": liste["date"][i], "price": liste["price"][i]} for i in range(len(liste["date"]))]
-        
-        # get prix between 2 date
-        liste = [price for price in liste if price["date"] >= date_start and price["date"] <= date_end]
+        # filter the liste by date
+        liste = [item for item in liste if item["date"] >= date_start and item["date"] <= date_end]
         
         return liste
+        
+        # transform liste which is a dictionary to a list of dictionaries
+        # liste = [{"date": liste["date"][i], "price": liste["price"][i]} for i in range(len(liste["date"]))]
+        
+        # # get prix between 2 date
+        # liste = [price for price in liste if price["date"] >= date_start and price["date"] <= date_end]
+        
+        # return liste
     
     async def get_price_range(self,id,date_start,date_end):
         
@@ -65,11 +80,7 @@ class CryptoService:
         liste = await self.get_liste_prix_from_json(id)
         # transform liste which is a data frame to json
         
-        # transform liste which is a dictionary to a list of dictionaries
-        liste = [{"date": liste["date"][i], "price": liste["price"][i]} for i in range(len(liste["date"]))]
-        
-        # get prix between 2 date
-        liste = [price for price in liste if price["date"] >= date_start and price["date"] <= date_end]
+        liste = [item for item in liste if item["date"] >= date_start and item["date"] <= date_end]
         
         # get max price and min price
         max_price = 0
@@ -326,7 +337,7 @@ class CryptoService:
             price = await coinGeckoService.get_last_Data(crypto["id"])
         
         new_data = {
-            "data": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
             "price": price
         }
         #put data to botome of json file

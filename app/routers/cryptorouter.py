@@ -171,7 +171,7 @@ async def get_priceRange(id: str,date_start,date_end):
     return await cryptoService.get_price_range(id,date_start,date_end)
 
 @cryptorouter.get("/{id}/price/historique")
-async def get_historique_price(id: str,date_start,date_end):
+async def get_historique_price(id: str,date_start,date_end = None):
     return await cryptoService.get_liste_prix_between_2_dates(id,date_start,date_end)
 
 @cryptorouter.get("/{id}/set_price")
