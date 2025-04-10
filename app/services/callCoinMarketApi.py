@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 BASE_DIR = Path(__file__).resolve().parent.parent 
 load_dotenv(BASE_DIR / ".env")
-key = os.getenv("key_coin_market_cap")
+key = os.getenv("key_coin_market_cap_1")
 # key = "d85a5f07-d675-48f5-8e8e-e9617ae7fcf3"
 
 class CallCoinMarketApi():
@@ -102,6 +102,7 @@ class CallCoinMarketApi():
             "accept": "application/json",
             "X-CMC_PRO_API_KEY": key
         }
+        print(key)
         response = requests.get(url, headers=headers, params=params)
         data = json.loads(response.text)
         data = data.get("data")

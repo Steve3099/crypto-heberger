@@ -2,10 +2,13 @@ import json
 import os
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
+from app.services.binanceService import BinanceService
+
 from fastapi import HTTPException
 from datetime import datetime
 coinGeckoService = CoinGeckoService()
 callCoinMarketApi = CallCoinMarketApi()
+binanceService = BinanceService()
 
 class CryptoService:
     async def get_crypto_rankings(self,id):
@@ -48,13 +51,15 @@ class CryptoService:
                 liste_prix.append(item)
             
             return liste_prix
-        # return await coinGeckoService.get_historical_prices(id)
     
     async def get_liste_prix_between_2_dates(self,id,date_start,date_end):
         if date_end is None:
             date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
         if date_start > date_end:
             raise HTTPException(status_code=400, detail="date_start should be less than date_end")
+        
+        
+        
         liste = await self.get_liste_prix_from_json(id)
         
         # filter the liste by date
@@ -62,13 +67,6 @@ class CryptoService:
         
         return liste
         
-        # transform liste which is a dictionary to a list of dictionaries
-        # liste = [{"date": liste["date"][i], "price": liste["price"][i]} for i in range(len(liste["date"]))]
-        
-        # # get prix between 2 date
-        # liste = [price for price in liste if price["date"] >= date_start and price["date"] <= date_end]
-        
-        # return liste
     
     async def get_price_range(self,id,date_start,date_end):
         
@@ -241,6 +239,9 @@ class CryptoService:
                     # await self.set_info_one_crypto(item["id"],item)
                     break
         
+        # drop crypto with duplica id
+        liste_crypto = list({v['id']:v for v in liste_crypto}.values())
+        
         with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
             json.dump(liste_crypto, f, indent=4, ensure_ascii=False)
             # f.write(json.dumps(info))
@@ -321,7 +322,6 @@ class CryptoService:
             # f.write(json.dumps(liste_somme_arket_cap))
         
         return "market_cap generale done"
-    
     async def refresh_price_one_crypto(self,crypto,liste_crypto_nofilter):
         new_data = {}
         price = -1
@@ -370,6 +370,36 @@ class CryptoService:
         with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
             json.dump(liste_crypto_nofilter, f, indent=4, ensure_ascii=False)
     
-            
-            
+    
+    async def set_crypto_coin_gecko_correled_with_binance(self):
+        liste_coin_gecko = await coinGeckoService.get_liste_crypto_nofilter()
         
+        # remove duplicate crypto from liste_coin_gecko
+        liste_coin_gecko = list({v['id']:v for v in liste_coin_gecko}.values())
+        
+        liste_binance = await binanceService.get_symbols_from_json()
+        
+        liste_crypto = []
+        
+        for item in liste_coin_gecko:
+            i = 0
+            for item2 in liste_binance:
+                
+                # remothe the usdt at the end of item2
+                # item2 = item2.replace("usdt","")
+                
+                if item["symbol"].lower() == item2["baseAsset"].lower():
+                    
+                    # print(item["symbol"].lower(),item2["baseAsset"].lower())
+                    liste_crypto.append(item)
+                    #remove item2 from liste_binance
+                    liste_binance.remove(item2)
+                    i = 1
+                    break     
+        # put liste crypto to json file
+        with open('app/json/crypto/info/crypto_binance.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_crypto, f, indent=4, ensure_ascii=False)
+        # print(len(liste_binance))
+        return liste_crypto
+            
+    

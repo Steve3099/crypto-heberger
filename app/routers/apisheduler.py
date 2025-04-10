@@ -6,6 +6,7 @@ from app.services.voaltiliteService import VolatiliteService
 from app.services.cryptoService import CryptoService
 from app.services.skeuness_kurtoService import Skewness_KurtoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
+from app.services.binanceService import BinanceService
 
 apisheduler = APIRouter()
 indexService = IndexService()
@@ -15,6 +16,7 @@ varService = VarService()
 cryptoService = CryptoService()
 skewness_kurtoService = Skewness_KurtoService()
 callCoinMArketApi = CallCoinMarketApi()
+binanceSerice = BinanceService()
 
 @apisheduler.get("/sheduler/listeprix")
 async def set_liste_prix():
@@ -168,3 +170,13 @@ async def set_global_data_to_json():
 async def refresh_price_crypto():
     await cryptoService.refresh_price_crypto()
     return {"message":"refresh price crypto done"}
+
+@apisheduler.get('/sheduler/get_binance_id')
+async def get_binance_id():
+    return await binanceSerice.get_binance_symbols()
+    # return {"message":"refresh price crypto done"}
+
+@apisheduler.get('/sheduler/get_crypto_coin_gecko_correled_with_binance')
+async def get_crypto_coin_gecko_correled_with_binance():
+    return await cryptoService.set_crypto_coin_gecko_correled_with_binance()
+    # return {"message":"refresh price crypto done"}

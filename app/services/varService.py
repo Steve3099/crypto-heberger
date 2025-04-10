@@ -196,6 +196,9 @@ class VarService:
     async def calcul_var_one_crypto(self,id,percentile=1):
         # crypto_name = crypto_names[i].get("id")
         liste_prix = await cryptoService.get_liste_prix_from_json(id)
+        
+        # transform liste prix to dataframe
+        liste_prix = pd.DataFrame(liste_prix)
         # Calculer les rendements journaliers logarithmiques
         liste_prix['log_return'] = np.log(liste_prix['price'] / liste_prix['price'].shift(1))
         # Supprimer les valeurs NaN

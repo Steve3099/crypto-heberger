@@ -48,7 +48,7 @@ class CoinGeckoService:
         
         return df
     
-    async def get_liste_crypto_no_filtre(self,categorie_id="layer-1",page=1):
+    async def get_liste_crypto_no_filtre(self,categorie_id="layer-1",page=1,order ="volume_desc"):
         url = "https://api.coingecko.com/api/v3/coins/markets"
 
         params = {
@@ -56,7 +56,7 @@ class CoinGeckoService:
             "per_page": 250,
             # "category": categorie_id,
             "page":page,
-            # "order": "volume_desc"
+            "order": "order"
         }
         headers = {
             "accept": "application/json",
@@ -93,7 +93,8 @@ class CoinGeckoService:
         
         list_crypto_page_2 = await self.get_liste_crypto(page = 2)
 
-        list_crypto = list_crypto_page_1 + list_crypto_page_2
+        list_crypto_page_3 = await self.get_liste_crypto(page = 3)
+        list_crypto = list_crypto_page_1 + list_crypto_page_2 + list_crypto_page_3
 
         list_crypto = await self.excludeStableCoin(list_crypto)
         
