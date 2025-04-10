@@ -57,10 +57,12 @@ class CryptoService:
             date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
         if date_start > date_end:
             raise HTTPException(status_code=400, detail="date_start should be less than date_end")
-        
-        
-        
-        liste = await self.get_liste_prix_from_json(id)
+        liste = []
+        crypto = await self.check_if_crypto_in_binance(id)
+        if crypto != False:
+            liste = await self.get_liste_price_binance_from_json(crypto)
+        else:
+            liste = await self.get_liste_prix_from_json(id)
         
         # filter the liste by date
         liste = [item for item in liste if item["date"] >= date_start and item["date"] <= date_end]
@@ -330,12 +332,90 @@ class CryptoService:
             if crypto["name"].lower() == item["name"].lower() or crypto["symbol"].lower() == item["symbol"].lower():
                 crypto["current_price"] = item["current_price"]
                 price = item["current_price"]
-                break
+                val+=1
         
-        if price <= 0:
-            val += 1
-            price = await coinGeckoService.get_last_Data(crypto["id"])
+        # if price <= 0:
+        #     val += 1
+        #     price = await coinGeckoService.get_last_Data(crypto["id"])
         
+                new_data = {
+                    "date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                    "price": price
+                }
+                #put data to botome of json file
+                data = []
+                try:
+                    file_path = f'app/json/crypto/prix/{crypto["id"]}_prix.json'
+                    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                    else:
+                        data = []
+                        
+                except FileNotFoundError:
+                    # write to json file
+                    data =[]
+                data.append(new_data)
+                with open('app/json/crypto/prix/'+crypto["id"]+'_prix.json', 'w') as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+                return True
+        return crypto
+            
+        
+    async def refresh_price_crypto(self):
+        liste_crypto = await callCoinMarketApi.get_liste_cypto_ufiltered()
+        
+        liste_crypto_nofilter = await self.get_liste_crypto_nofilter(1,15000)
+        
+        liste_crypto_nofilter = liste_crypto_nofilter["liste"]
+        val = 0
+        liste_non_maj = []
+        for item in liste_crypto_nofilter:
+            val = await self.refresh_price_one_crypto(item,liste_crypto)
+            if val != True:
+                liste_non_maj.append(item)
+        
+        await self.update_price_for_liste_Not_Maj(liste_non_maj)
+        
+        print("crypto price updated")
+        print(val)
+        with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
+            json.dump(liste_crypto_nofilter, f, indent=4, ensure_ascii=False)
+    
+    async def update_price_for_liste_Not_Maj(self,liste):
+        
+        # can only send 250 ids per request
+        numberRequest = (len(liste) // 250) + 1
+        for i in range(numberRequest):
+            start = i * 250
+            end = start + 250
+            if end > len(liste):
+                end = len(liste)
+            
+            # get the ids from liste
+            liste_used = liste[start:end]
+            listeIds = ''
+        
+            for item in liste_used:
+                listeIds += item["id"]+','
+            
+            #remothe the coma at the end of the string
+            listeIds = listeIds[:-1]
+            
+            # update price for each id in liste
+            liste_data = await coinGeckoService.get_last_Data(listeIds)
+            for item in liste_used:
+                
+                price = liste_data.get(item["id"]).get("usd")
+                item["current_price"] = price
+                await self.update_price(price,item["id"])
+            
+       
+    
+    async def update_price(self,price,id):
+        # if price <= 0:
+        #     val += 1
+    
         new_data = {
             "date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
             "price": price
@@ -343,7 +423,7 @@ class CryptoService:
         #put data to botome of json file
         data = []
         try:
-            file_path = f'app/json/crypto/prix/{crypto["id"]}_prix.json'
+            file_path = f'app/json/crypto/prix/{id}_prix.json'
             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
@@ -354,22 +434,8 @@ class CryptoService:
             # write to json file
             data =[]
         data.append(new_data)
-        with open('app/json/crypto/prix/'+crypto["id"]+'_prix.json', 'w') as f:
+        with open('app/json/crypto/prix/'+id+'_prix.json', 'w') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
-        return val
-    async def refresh_price_crypto(self):
-        liste_crypto = await callCoinMarketApi.get_liste_cypto_ufiltered()
-        
-        liste_crypto_nofilter = await self.get_liste_crypto_nofilter(1,15000)
-        
-        liste_crypto_nofilter = liste_crypto_nofilter["liste"]
-        for item in liste_crypto_nofilter:
-            await self.refresh_price_one_crypto(item,liste_crypto)
-        print("crypto price updated")
-        
-        with open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
-            json.dump(liste_crypto_nofilter, f, indent=4, ensure_ascii=False)
-    
     
     async def set_crypto_coin_gecko_correled_with_binance(self):
         liste_coin_gecko = await coinGeckoService.get_liste_crypto_nofilter()
@@ -401,5 +467,37 @@ class CryptoService:
             json.dump(liste_crypto, f, indent=4, ensure_ascii=False)
         # print(len(liste_binance))
         return liste_crypto
-            
     
+    async def get_liste_crypto_binance(self):
+        with open('app/json/crypto/info/crypto_binance.json', 'r', encoding='utf-8') as f:
+            liste1 = json.load(f)
+        
+        # order by market cap
+        liste = sorted(liste1, key=lambda x: x["market_cap"], reverse=True)
+        
+        return liste
+    async def check_if_crypto_in_binance(self,id):
+        # read listecrypto from json file
+        liste_binance = await self.get_liste_crypto_binance()
+        
+        for crypto in liste_binance:
+            if crypto["id"] == id:
+                return crypto
+        
+        return False
+    
+    async def get_liste_price_binance_from_json(self,crypto):
+        symbole = crypto.get("symbol")
+        #put symbole to lowaercase
+        symbole = symbole.lower()
+        with open('app/json/crypto/websocket_price/'+symbole+'usdt_price.json', 'r') as f:
+            data = f.read()
+            # return as a json
+            
+            liste = json.loads(data)
+            # return liste
+            liste_prix = []
+            for item in liste:
+                liste_prix.append(item)
+            
+            return liste_prix

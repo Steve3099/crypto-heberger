@@ -462,5 +462,5 @@ class CoinGeckoService:
         }
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
-        return data.get(id).get("usd")
+        return data
     

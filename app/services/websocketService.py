@@ -37,6 +37,7 @@ async def get_symboles_liste_from_json():
 async def track_prices():
     liste = await get_symboles_liste_from_json()
     PAIRS = [el["symbol"].lower() for el in liste]
+    # PAIRS = ["btcusdt", "ethusdt", "solusdt"]
     stream_query = "/".join([f"{pair}@ticker" for pair in PAIRS])
     BINANCE_WS_URL = f"wss://stream.binance.com:9443/stream?streams={stream_query}"
 
@@ -63,7 +64,7 @@ async def track_prices():
                     if "data" in message:
                         stream_data = message["data"]
                         symbol = stream_data["s"].lower()
-                        price = price = round(float(stream_data["p"]), 12)
+                        price = price = round(float(stream_data["c"]), 12)
                         price_buffer[symbol] = price
 
         except websockets.exceptions.ConnectionClosedError as e:

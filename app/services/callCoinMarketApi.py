@@ -102,7 +102,6 @@ class CallCoinMarketApi():
             "accept": "application/json",
             "X-CMC_PRO_API_KEY": key
         }
-        print(key)
         response = requests.get(url, headers=headers, params=params)
         data = json.loads(response.text)
         data = data.get("data")

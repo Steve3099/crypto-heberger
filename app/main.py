@@ -8,7 +8,7 @@ from app.routers.betaRouter import betarouter
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.websocketService import track_prices
 import asyncio
-# import app.scheduler as scheduler
+import app.scheduler as scheduler
 
 app = FastAPI()
 
