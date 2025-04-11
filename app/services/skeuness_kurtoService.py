@@ -89,5 +89,4 @@ class Skewness_KurtoService:
             df = await coinGeckoService.get_historical_prices(crypto = id, days =90)
             
             return await self.calculate_skewness_kurtosis_one_crypto(df,id)
-            return {"skewness":None, "kurtosis":None}
         

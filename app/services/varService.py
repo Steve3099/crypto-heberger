@@ -321,14 +321,15 @@ class VarService:
             return await self.set_historique_var_crypto(id)
     
     async def update_var_historique(self,id):
+        
         liste_var = await self.read_var_historique_for_one_crypto(id)
         # get last date frrom var.json
         last_date = liste_var[-1].get("date")
         
         # chech if format of last date is %Y-%m-%dT00:00:00.000 avec hours and minute and second zero
-        if last_date[-14:] != "T00:00:00.000":
-            liste_var = await self.set_historique_var_crypto(id)
-            return liste_var
+        # if last_date[-14:] != "T00:00:00.000":
+        #     liste_var = await self.set_historique_var_crypto(id)
+        #     return liste_var
         
         # get today date
         today = datetime.now().strftime("%Y-%m-%dT00:00:00.000")
@@ -338,17 +339,23 @@ class VarService:
         today = datetime.strptime(today, date_format)
         delta = today - last_date
         delta = delta.days
+        print(delta)
+         
         if delta > 1:
             liste_prix = await coinGeckoService.get_historical_prices(id,"usd",90)
             liste_prix = liste_prix[:-2]
+            liste_prix = liste_prix[::-1] # reverse order of liste prix
+            
             for i in range(delta-1):
-                var  = await self.calcul_var_with_price(liste_prix)
+                prix_used = liste_prix[i:]
+                var  = await self.calcul_var_with_price(prix_used)
+                print(len(prix_used))
                 data = {
                     "date": (last_date + timedelta(days=i+1)).strftime("%Y-%m-%dT00:00:00.000"),
                     "var": var
                 }
                 liste_var.append(data)
-                liste_prix = liste_prix.iloc[:-1]
+                # liste_prix = liste_prix.iloc[:-1]
         
 
             with open('app/json/var/historique/'+id+'_var.json', 'w', encoding='utf-8') as f:

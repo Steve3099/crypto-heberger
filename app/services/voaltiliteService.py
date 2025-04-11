@@ -389,7 +389,7 @@ class VolatiliteService:
                 last_date = datetime.strptime(last_date, '%Y-%m-%dT%H:%M:%S.%f').date()
                 difference = today - last_date
                 # return data
-                #print(difference.days)
+                print(difference.days)
                 if difference.days >= 2:
                     data = await self.update_historique_volatilite_for_one_crypto(id)
                 for el in data:

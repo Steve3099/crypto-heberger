@@ -114,6 +114,14 @@ class CoinGeckoService:
             df["price"] = df["price"].astype(float)  # Convert to Python float
             df["date"] = df["date"].astype(str) 
             
+            # check if the las date is today
+            last_date = df["date"].iloc[-1]
+            last_date = pd.to_datetime(last_date)
+            today = pd.to_datetime(datetime.datetime.now().strftime("%Y-%m-%d"))
+            if last_date != today:
+                raise FileNotFoundError("File not found")
+            
+            
             return df[['date', 'price']]  # Return only date and price
 
         except FileNotFoundError:
