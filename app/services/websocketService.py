@@ -10,24 +10,31 @@ async def save_all_prices():
     for pair, price in list(price_buffer.items()):
         await save_price(pair, price)
 
+price_file_lock = asyncio.Lock()
+
+
 async def save_price(pair, price):
-    filename = f"app/json/crypto/websocket_price/{pair}_price.json"
-    data_entry = {
-        "date": datetime.utcnow().isoformat(),
-        "price": price
-    }
+    async with price_file_lock:
+        filename = f"app/json/crypto/websocket_price/{pair}_price.json"
+        data_entry = {
+            "date": datetime.utcnow().isoformat(),
+            "price": price
+        }
+        try:
+            async with aiofiles.open(filename, mode='r', encoding='utf-8') as f:
+                content = await f.read()
+                data = json.loads(content) if content else []
+                
+        except FileNotFoundError:
+            data = []
+        except Exception as e:
+            print(f"Error reading {filename}: {e}")
+            # data = []
 
-    try:
-        async with aiofiles.open(filename, mode='r', encoding='utf-8') as f:
-            content = await f.read()
-            data = json.loads(content) if content else []
-    except FileNotFoundError:
-        data = []
+        data.append(data_entry)
 
-    data.append(data_entry)
-
-    async with aiofiles.open(filename, mode='w', encoding='utf-8') as f:
-        await f.write(json.dumps(data, indent=4))
+        async with aiofiles.open(filename, mode='w', encoding='utf-8') as f:
+            await f.write(json.dumps(data, indent=4))
 
 async def get_symboles_liste_from_json():
     with open("app/json/binance/symbols.json", "r") as f:

@@ -84,7 +84,7 @@ class CoinGeckoService:
                     coin["current_price"] is not None and 
                     coin["market_cap"]  > 0 and
                     coin["price_change_percentage_24h"] is not None and
-                    (coin["total_volume"]  is not  None or coin["total_volume"] >= 2000000)]
+                    (coin["total_volume"]  is not  None and coin["total_volume"] >= 2000000)]
         
         return filtered
     
@@ -105,7 +105,7 @@ class CoinGeckoService:
         #  check if crypto+_historique.json exist
         try:
             # Load JSON
-            print("here1")
+            print(crypto)
             with open('app/historique_prix_json/'+crypto + "_historique.json") as f:
                 historique = json.load(f)
             df = pd.DataFrame(historique)  
@@ -117,8 +117,11 @@ class CoinGeckoService:
             # check if the las date is today
             last_date = df["date"].iloc[-1]
             last_date = pd.to_datetime(last_date)
-            today = pd.to_datetime(datetime.datetime.now().strftime("%Y-%m-%d"))
-            if last_date != today:
+            today = datetime.datetime.now()
+            # today = pd.to_datetime(datetime.datetime.now().strftime("%Y-%m-%d"))
+            dif = today - last_date
+            dif = dif.days
+            if dif >= 2:
                 raise FileNotFoundError("File not found")
             
             

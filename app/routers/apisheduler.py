@@ -78,7 +78,7 @@ async def action():
     # await set_liste_sans_filtre()
     await set_liste_crypto_with_weight()
     await set_var()
-    await set_volatilite_crypto()
+    # await set_volatilite_crypto()
     return {"message":"action done"}
 
 @apisheduler.get('/sheduler/set_info_crypto')

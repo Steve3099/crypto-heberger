@@ -1,3 +1,4 @@
+import time
 from fastapi import HTTPException
 from app.services.calculService import CalculService
 from app.services.coinGeckoService import CoinGeckoService
@@ -81,15 +82,22 @@ class VolatiliteService:
         if difference >= 2:
             vs_currency="usd"
             liste_crypto_start = await coinGeckoService.get_liste_crypto_filtered()
+            liste_crypto_start = liste_crypto_start[:80]
             # get liste de prix
             
             liste_crypto = []
             liste_prix = []
+            i = 0
             for el in liste_crypto_start:
+                print(el.get("id"))
                 historique = await coinGeckoService.get_historical_prices(el.get('id'),vs_currency,90)
+                i+=1
                 if len(historique) > 90:
                     liste_crypto.append(el)
                     liste_prix.append(historique[:-2])
+                
+                if i == 20:
+                    time.sleep(60)
             liste_crypto = liste_crypto[:80]
             liste_prix = liste_prix[:80]
             # get liste_weight
