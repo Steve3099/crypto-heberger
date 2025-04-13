@@ -79,7 +79,7 @@ async def getFearAndGreed():
 @cryptorouter.get("/listeCryptoVolatilite")    
 async def getListeCryptoAvecVolatilite():
     listeCrypto = await getListe()
-    listeVolatilite = calculService.top5volatiliteJournaliere(listeCrypto)
+    listeVolatilite = await calculService.top5volatiliteJournaliere(listeCrypto)
     return listeVolatilite
     
 
@@ -106,7 +106,7 @@ async def getListeCryptoAvecPoids():
 @cryptorouter.get("/GraphWeights")  
 async def getGraphPoids():
     listeCrypto = await getListeCryptoAvecPoids()
-    return coinGeckoService.getGraphWeight(listeCrypto)
+    return await coinGeckoService.getGraphWeight(listeCrypto)
 
 @cryptorouter.get("/Comparaison")  
 async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_currency = "USD",days= 90):
@@ -129,12 +129,12 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
         market_cap = await coinGeckoService.get_market_cap(el.get("id"))
         liste_market_cap.append(market_cap)
         
-    liste_weight = calculService.normalize_weights(liste_market_cap)
-    liste_weight = calculService.round_weights(liste_weight)
+    liste_weight = await calculService.normalize_weights(liste_market_cap)
+    liste_weight = await calculService.round_weights(liste_weight)
     
     
-    liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
-    correlation_matrix = calculService.calculate_correlation_matrix(covariance_matrix)
+    liste_volatilite, portfolio_volatility_mat,covariance_matrix = await calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
+    correlation_matrix = await calculService.calculate_correlation_matrix(covariance_matrix)
     retour = {
         "matricecorrelation": correlation_matrix,
     }

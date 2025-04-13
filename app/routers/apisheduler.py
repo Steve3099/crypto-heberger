@@ -8,6 +8,8 @@ from app.services.skeuness_kurtoService import Skewness_KurtoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.binanceService import BinanceService
 
+import asyncio
+
 apisheduler = APIRouter()
 indexService = IndexService()
 coinGeckoService = CoinGeckoService()
@@ -68,18 +70,31 @@ async def update_volatilite_for_ecah_crypto():
 #     await varService.set_Var_for_each_crypto()
 #     return {"message":"var done"}
 
+# @apisheduler.get('/sheduler/action')
+# async def action():
+#     await set_fear_and_greed()
+#     await set_liste_prix()
+#     await set_market_cap()
+#     await update_volatilite_generale()
+#     await update_volatilite_for_ecah_crypto()
+#     # await set_liste_sans_filtre()
+#     await set_liste_crypto_with_weight()
+#     await set_var()
+#     # await set_volatilite_crypto()
+#     return {"message":"action done"}
 @apisheduler.get('/sheduler/action')
 async def action():
-    await set_fear_and_greed()
-    await set_liste_prix()
-    await set_market_cap()
-    await update_volatilite_generale()
-    await update_volatilite_for_ecah_crypto()
-    # await set_liste_sans_filtre()
-    await set_liste_crypto_with_weight()
-    await set_var()
-    # await set_volatilite_crypto()
-    return {"message":"action done"}
+    async def run_all():
+        await set_fear_and_greed()
+        await set_liste_prix()
+        await set_market_cap()
+        await update_volatilite_generale()
+        await update_volatilite_for_ecah_crypto()
+        await set_liste_crypto_with_weight()
+        await set_var()
+
+    asyncio.create_task(run_all())
+    return {"message": "tasks running in background"}
 
 @apisheduler.get('/sheduler/set_info_crypto')
 async def set_info_crypto():
