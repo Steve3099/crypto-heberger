@@ -20,9 +20,9 @@ app.add_middleware(
     allow_methods=["*"],  # You can limit this to specific methods (e.g., ["GET", "POST"])
     allow_headers=["*"],  # You can limit this to specific headers if needed
 )
-@app.on_event("startup")
-async def start_ws_listener():
-    asyncio.create_task(track_prices())
+# @app.on_event("startup")
+# async def start_ws_listener():
+#     asyncio.create_task(track_prices())
 @app.get("/")
 def read_root():
    return {"message": "Welcome to FastAPI!"}

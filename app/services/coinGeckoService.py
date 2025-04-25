@@ -422,3 +422,29 @@ class CoinGeckoService:
                 response.raise_for_status()
                 data = await response.json()
         return data
+
+    async def get_prix_one_crypto_2(self, crypto, intervale="", vs_currency="usd", days=90):
+        url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+        params = {
+            'vs_currency': vs_currency,
+            'days': days,
+            'interval': intervale,
+        }
+        headers = {
+            "accept": "application/json",
+            "x-cg-demo-api-key": key,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as response:
+                response.raise_for_status()
+                data = await response.json()
+        
+        # prices = data['prices']
+        # market_caps = data['market_caps']
+        # df = pd.DataFrame(prices, columns=['timestamp', 'price','market_cap'])
+        # df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+        # df['price'] = df['price']
+        # df['market_cap'] = data['market_caps']
+        
+        return data

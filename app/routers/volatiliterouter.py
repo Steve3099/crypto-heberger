@@ -22,6 +22,7 @@ async def get_volatilite_generale():
 async def get_Data_volatilite_one_crypto(id):
     date_start="2024-11-29T00:00:00.000"
     date_end= None
+    
     if date_end is None:
         date_end = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f")
     

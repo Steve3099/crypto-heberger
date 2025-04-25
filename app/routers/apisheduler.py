@@ -195,3 +195,8 @@ async def get_binance_id():
 async def get_crypto_coin_gecko_correled_with_binance():
     return await cryptoService.set_crypto_coin_gecko_correled_with_binance()
     # return {"message":"refresh price crypto done"}
+    
+@apisheduler.get('/sheduler/set_index_between_dates')
+async def set_index_between_dates(start_date, end_date):
+    return await indexService.generate_index_between_dates(start_date, end_date)
+    return {"message":"index between dates done"}

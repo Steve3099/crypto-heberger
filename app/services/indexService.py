@@ -138,3 +138,79 @@ class IndexService:
             return []
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse index JSON: {e}")
+        
+    async def generate_index_between_dates(self, date_start=None, date_end=None):
+        """Generate index values between two dates."""
+        liste_indice = await self.get_liste_index_from_json_file(date_start, date_end)
+        # if not liste_indice:
+        #     raise HTTPException(status_code=404, detail="No index data found for the specified date range")
+
+        # calcule days between dates
+        date_format = "%Y-%m-%d %H:%M:%S"
+        start_date = datetime.strptime(date_start, date_format)
+        end_date = datetime.strptime(date_end, date_format)
+        today = datetime.now()
+        #diferences between today and date_start
+        dif = (today - start_date).days
+        delta = (end_date - start_date).days
+        if delta < 0:
+            raise HTTPException(status_code=400, detail="End date must be after start date")
+        
+        data = await coingeckoservice.get_liste_crypto_filtered()
+        filtered_data = [
+            coin for coin in data
+            if coin["current_price"] is not None and
+                (coin["total_volume"] is None or coin["total_volume"] >= 2000000)
+        ]
+        filtered_data = filtered_data[:80]
+        liste_data = []
+        i = 0
+        for coin in filtered_data:
+            data = await coingeckoservice.get_prix_one_crypto_2(coin["id"],vs_currency="usd", days=dif+1)
+            
+            liste_data.append(data)
+            if i%20 == 0 and i!= 0:
+                await asyncio.sleep(60)
+            i+=1
+        
+        liste_market_cap_total = await self.get_market_cap_total(filtered_data, liste_data)
+        
+        async with aiofiles.open('app/json/index/base_market_cap.json', 'r', encoding='utf-8') as f:
+            value = await f.read()
+            if value.strip():
+                base_market_cap = float(value)
+        
+        liste_index = []
+        for i in range(len(liste_market_cap_total)):
+            index = (liste_market_cap_total[i] / base_market_cap) * 100
+            val = {
+                "date": datetime.fromtimestamp(liste_data[0]["prices"][i][0] / 1000).strftime('%Y-%m-%d %H:%M:%S'),
+                "value": index
+            }
+            # verif that date is not over date_end
+            if val["date"] > date_end:
+                break
+            if val["date"] < date_start:
+                continue
+            liste_index.append(val)
+            liste_indice.append(val)
+        
+        #order the list by date
+        liste_indice = sorted(liste_indice, key=lambda x: x["date"])
+        # Save the updated index data to JSON file
+        file_path = 'app/json/index/index.json'
+        os.makedirs('app/json/index', exist_ok=True)
+        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+            await f.write(json.dumps(liste_indice, indent=4, ensure_ascii=False))
+        
+        return liste_index
+    async def get_market_cap_total(self, liste_crypto, data):
+        market_cap_liste_total = []
+        # calucl each market cap total for each timestamp
+        for i in range(len(data[0]["prices"])):
+            market_cap_total = 0
+            for j in range(len(liste_crypto)):
+                market_cap_total += data[j]["market_caps"][i][1]
+            market_cap_liste_total.append(market_cap_total)
+        return market_cap_liste_total
+            

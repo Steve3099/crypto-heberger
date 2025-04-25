@@ -3,11 +3,11 @@ uvicorn app.main:app --reload
 
 ssh root@82.112.255.67
 helloFromMinecraft2#
-scp -r C:\Asa\Crypto\crypto-heberger\crypto-heberger root@82.112.255.67:~/crypto_python_api/
-scp -r C:/Asa/Crypto/crypto-heberger/crypto-heberger root@82.112.255.67:~/crypto_python_api
 
-CD
-python3 -m venv venvpython
+pip freeze > requirements.txt
+pip install -r requirements.txt
+
+
 source venv/bin/activate 
 
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
