@@ -47,26 +47,6 @@ class SimulateurService:
 
         return historique_volatilite
 
-    async def simulateur_var(self, id, valeur):
-        """Simulate VaR by appending a new price and calculating."""
-        if valeur < 0:
-            raise HTTPException(status_code=400, detail="Value must be positive")
-
-        # Fetch price data
-        liste_prix = await cryptoService.get_liste_prix_from_json(id)
-        if not liste_prix:
-            raise HTTPException(status_code=404, detail=f"No price data for crypto {id}")
-
-        # Convert to DataFrame
-        liste_prix = pd.DataFrame(liste_prix, columns=['date', 'price'])
-        
-        # Append new price
-        now = datetime.now().date()
-        liste_prix.loc[len(liste_prix)] = [now, valeur]
-
-        # Calculate VaR
-        return await varService.calcul_var_one_crypto(id)
-
     async def simulate_crypto_price(self, S0, mu, sigma, T, n_simulations=20, n=90):
         """Simulate crypto price trajectories using geometric Brownian motion."""
         np.random.seed(42)  # For reproducibility
@@ -136,3 +116,112 @@ class SimulateurService:
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Simulation error: {str(e)}")
+    
+    async def simulate_var(self, crypto_id):
+        # get crypto prices
+        liste_prix = await coinGeckoService.get_historical_prices(crypto_id, days=90)
+        if liste_prix.empty:
+            raise HTTPException(status_code=404, detail=f"No price data for crypto {crypto_id}")
+        
+        # btc_prices = get_historical_prices(days=90)
+        var_hist, var_coin_returns = await varService.calculate_var_historical(liste_prix)
+        var_mc, simulated_returns = await varService.calculate_var_monte_carlo(var_coin_returns)
+        
+        # print("=== Résultats BTC ===")
+        # print(f"VaR historique (99%) : {var_hist:.4f}")
+        # print(f"VaR Monte Carlo (99%) : {var_mc:.4f}")
+        # return 0
+        # # Graphique Monte Carlo
+        # plt.figure(figsize=(10, 5))
+        # plt.hist(simulated_returns, bins=100, color='skyblue', edgecolor='black')
+        # plt.axvline(var_mc, color='red', linestyle='dashed', linewidth=2, label=f'VaR Monte Carlo 99% = {var_mc:.4f}')
+        # plt.title('Simulation Monte Carlo des rendements BTC (1 jour)')
+        # plt.xlabel('Rendements simulés')
+        # plt.ylabel('Fréquence')
+        # plt.legend()
+        # plt.grid(True)
+        # plt.show()
+        
+        
+
+        return {
+            "historical_var": float(var_hist),
+            "monte_carlo_var": float(var_mc),
+            "simulated_returns": simulated_returns.tolist() if isinstance(simulated_returns, np.ndarray) else simulated_returns,
+            "title": 'Simulation Monte Carlo des rendements (1 jour)',
+            "x_label": 'Rendements simulés',
+            "y_label": 'Fréquence'
+        }
+    
+    async def simulation_potential_loss(self, crypto_id, quantite=100):
+        
+        # get crypto prices
+        liste_prix = await coinGeckoService.get_historical_prices(crypto_id, days=90)
+        if liste_prix.empty:
+            raise HTTPException(status_code=404, detail=f"No price data for crypto {crypto_id}")
+        
+        price = liste_prix['price'].iloc[-1]
+        
+        notional = quantite * price
+        
+        
+        # btc_prices = get_historical_prices(days=90)
+        var_hist, var_coin_returns = await varService.calculate_var_historical(liste_prix)
+        var_mc, simulated_returns = await varService.calculate_var_monte_carlo(var_coin_returns)
+        
+        # print("=== Résultats BTC ===")
+        # print(f"VaR historique (99%) : {var_hist:.4f}")
+        # print(f"VaR Monte Carlo (99%) : {var_mc:.4f}")
+        
+        var99_historique = var_hist
+        var99_monte_carlo = var_mc
+        perte_potentielle_historique = notional * var99_historique 
+        
+        perte_potentielle_monte_carlo = notional * var99_monte_carlo
+        
+        perte_portefeuil_coin_historique = perte_potentielle_historique/price
+        
+        perte_portefeuil_coin_monte_carlo = perte_potentielle_monte_carlo/price
+        
+        return {
+            "var_historique": {
+                "price": price,
+                "quantite": quantite,
+                "notional": notional,
+                "var99": var99_historique,
+                "potentiel_loss (us $)": perte_potentielle_historique,
+                "potentiel_loss (coin)": perte_portefeuil_coin_historique
+            },
+            "var_monte_carlo": {
+                "price": price,
+                "quantite": quantite,
+                "notional": notional,
+                "var99": var99_monte_carlo,
+                "potentiel_loss (us $)": perte_potentielle_monte_carlo,
+                "potentiel_loss (coin)": perte_portefeuil_coin_monte_carlo
+            }
+        }
+        
+        # return 0
+        # # Graphique Monte Carlo
+        # plt.figure(figsize=(10, 5))
+        # plt.hist(simulated_returns, bins=100, color='skyblue', edgecolor='black')
+        # plt.axvline(var_mc, color='red', linestyle='dashed', linewidth=2, label=f'VaR Monte Carlo 99% = {var_mc:.4f}')
+        # plt.title('Simulation Monte Carlo des rendements BTC (1 jour)')
+        # plt.xlabel('Rendements simulés')
+        # plt.ylabel('Fréquence')
+        # plt.legend()
+        # plt.grid(True)
+        # plt.show()
+        
+        
+
+        # return {
+        #     "historical_var": float(var_hist),
+        #     "monte_carlo_var": float(var_mc),
+        #     "simulated_returns": simulated_returns.tolist() if isinstance(simulated_returns, np.ndarray) else simulated_returns,
+        #     "title": 'Simulation Monte Carlo des rendements (1 jour)',
+        #     "x_label": 'Rendements simulés',
+        #     "y_label": 'Fréquence'
+        # }
+                

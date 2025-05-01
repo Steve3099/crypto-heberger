@@ -335,3 +335,23 @@ class VarService:
                 await f.write(json.dumps(liste_var, indent=4, ensure_ascii=False))
 
         return liste_var
+    
+    async def calculate_var_historical(self,btc_prices, percentile=1):
+        btc_prices['log_return'] = np.log(btc_prices['price'] / btc_prices['price'].shift(1))
+        btc_returns = btc_prices['log_return'].dropna()
+        var_historical = np.percentile(btc_returns, percentile, method='lower')
+        return var_historical, btc_returns
+
+    # Fonction pour calculer la VaR Monte Carlo
+    async def calculate_var_monte_carlo(self,btc_returns, simulations=100000, percentile=1):
+        mu = btc_returns.mean()  # Moyenne des rendements
+        sigma = btc_returns.std()  # Écart-type des rendements
+
+        # Affichage de mu et sigma
+        # print(f"--- Résultats statistiques ---")
+        # print(f"Moyenne (mu) des rendements : {mu:.6f}")
+        # print(f"Écart-type (sigma) des rendements : {sigma:.6f}")
+        
+        simulated_returns = np.random.normal(mu, sigma, simulations)
+        var_mc = np.percentile(simulated_returns, percentile, method='lower')
+        return var_mc, simulated_returns
