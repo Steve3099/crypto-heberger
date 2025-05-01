@@ -210,7 +210,11 @@ class IndexService:
         for i in range(len(data[0]["prices"])):
             market_cap_total = 0
             for j in range(len(liste_crypto)):
-                market_cap_total += data[j]["market_caps"][i][1]
+                try:
+                    market_cap_total += data[j]["market_caps"][i][1]
+                except:
+                    continue
+                # market_cap_total += data[j]["market_caps"][i][1]
             market_cap_liste_total.append(market_cap_total)
         return market_cap_liste_total
             

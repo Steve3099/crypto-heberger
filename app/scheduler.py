@@ -31,8 +31,8 @@ async def six_minute_chrone_task():
 # Schedule the cron job
 # scheduler.add_job(indexService.set_Index, "interval", minutes=10, coalesce=True, misfire_grace_time=300, kwargs={}, id="index_update", replace_existing=True)
 # scheduler.add_job(coinGeckoService.set_global_data_to_json, "interval", minutes=10, coalesce=True, misfire_grace_time=300, kwargs={}, id="global_data_update", replace_existing=True)
-scheduler.add_job(ten_minute_task, "interval", minutes=10, coalesce=True, misfire_grace_time=300, kwargs={}, id="stablecoins_update", replace_existing=True)
-scheduler.add_job(six_minute_chrone_task, "interval", minutes=300, coalesce=True, misfire_grace_time=300, kwargs={}, id="crypto_price_update", replace_existing=True)
+scheduler.add_job(ten_minute_task, "interval", minutes=20, coalesce=True, misfire_grace_time=300, kwargs={}, id="stablecoins_update", replace_existing=True)
+scheduler.add_job(six_minute_chrone_task, "interval", minutes=480, coalesce=True, misfire_grace_time=300, kwargs={}, id="crypto_price_update", replace_existing=True)
 # scheduler.add_job(volatiliteService.update_historique_volatilite_generale, "cron", hour=0, minute=5)
 # scheduler.add_job(coinGeckoService.schedule_historique_prix, "cron", hour=0, minute=5)
 # scheduler.add_job(coinGeckoService.schedule_market_cap, "cron", hour=1, minute=5)
