@@ -249,7 +249,7 @@ class VolatiliteService:
             historique = await coinGeckoService.get_historical_prices(el.get('id'), vs_currency, 90)
             if len(historique) <= 90:
                 continue
-            
+            historique = historique['price'].iloc[-1]
             file_path = f'app/json/volatilite/{el.get("id")}_volatilite.json'
             os.makedirs('app/json/volatilite', exist_ok=True)
             

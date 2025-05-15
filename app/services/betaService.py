@@ -10,33 +10,41 @@ rendementservice = RendementService()
 
 class BetaService:
     async def get_beta_on_crypto(self, id):
-        """Calculate beta, alpha, and R² for a cryptocurrency relative to the market index."""
-        # Fetch index data (last 90 days)
-        list_index = await indexService.get_liste_index_from_json_file()
-        list_index = list_index[-90:]
-        list_index_used = [el["value"] for el in list_index]
+        try :
+            """Calculate beta, alpha, and R² for a cryptocurrency relative to the market index."""
+            # Fetch index data (last 90 days)
+            list_index = await indexService.get_liste_index_from_json_file()
+            list_index = list_index[-180:]
+            list_index_used = [el["value"] for el in list_index]
 
-        # Fetch crypto price data (last 91 days for returns calculation)
-        list_prix = await coingeckoservice.get_prix_one_crypto(id, days=91)
-        list_prix = list_prix.tail(91)
+            # Fetch crypto price data (last 91 days for returns calculation)
+            list_prix = await coingeckoservice.get_prix_one_crypto(id, days=181)
+            list_prix = list_prix.tail(181)
+            # return list_prix
+            # Calculate returns
+            list_rendement = await rendementservice.get_rendement(list_prix)
+            list_rendement = list_rendement[-180:]
+            
+            # return list_rendement
+            # Validate data
+            if len(list_index_used) < 2 or len(list_rendement) < 2:
+                raise HTTPException(status_code=400, detail="Insufficient data for beta calculation")
+            if len(list_index_used) != len(list_rendement):
+                raise HTTPException(status_code=400, detail="Mismatched data lengths for market and portfolio")
 
-        # Calculate returns
-        list_rendement = await rendementservice.get_rendement(list_prix)
-
-        # Validate data
-        if len(list_index_used) < 2 or len(list_rendement) < 2:
-            raise HTTPException(status_code=400, detail="Insufficient data for beta calculation")
-        if len(list_index_used) != len(list_rendement):
-            raise HTTPException(status_code=400, detail="Mismatched data lengths for market and portfolio")
-
-        # Perform linear regression
-        market = list_index_used
-        portfolio = list_rendement
-        slope, intercept, r_value, _, _ = stats.linregress(market, portfolio)
-
-        # Return results
-        return {
-            "beta_portefeuille": slope,
-            "alpha_portefeuille": intercept,
-            "r²": r_value ** 2
-        }
+            # Perform linear regression
+            market = list_index_used
+            portfolio = list_rendement
+            slope, intercept, r_value, _, _ = stats.linregress(market, portfolio)
+            # print(list_rendement)
+            # return list_prix
+            return {
+                "beta_portefeuille": slope,
+                "alpha_portefeuille": intercept,
+                "r²": r_value ** 2,
+                "cloud_points": [{"x": x, "y": y} for x, y in zip(market, portfolio)]
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error calculating beta: {str(e)}")
+        
+        

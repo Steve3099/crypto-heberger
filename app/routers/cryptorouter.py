@@ -110,8 +110,8 @@ async def getGraphPoids():
 
 @cryptorouter.get("/Comparaison")  
 async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_currency = "USD",days= 90):
-    listeCrypto = await getListe()
-    
+    # listeCrypto = await getListe()
+    listeCrypto = await coinGeckoService.get_liste_crypto_with_weight()
     liste_crypto = ['','']
     for crypto in listeCrypto:
         if crypto.get("id") == crypto1Id:

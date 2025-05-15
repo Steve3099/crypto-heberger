@@ -191,6 +191,7 @@ class VarService:
         for el in liste_crypto:
             historique = await coinGeckoService.get_historical_prices(el.get('id'), "usd", 90)
             if len(historique) > 5:
+                historique = historique['price'].iloc[-1]
                 liste_price.append(historique)
                 liste_crypto_used.append(el)
 
@@ -342,6 +343,7 @@ class VarService:
         var_historical = np.percentile(btc_returns, percentile, method='lower')
         return var_historical, btc_returns
 
+    
     # Fonction pour calculer la VaR Monte Carlo
     async def calculate_var_monte_carlo(self,btc_returns, simulations=100000, percentile=1):
         mu = btc_returns.mean()  # Moyenne des rendements

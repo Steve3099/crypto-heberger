@@ -37,7 +37,7 @@ async def set_index():
 
 @apisheduler.get("/sheduler/listecryptowithweight")
 async def set_liste_crypto_with_weight():
-    await coinGeckoService.schedule_liste_crypto_with_weight_volatility()
+    return await coinGeckoService.schedule_liste_crypto_with_weight_volatility()
     return {"message":"liste crypto with weight done"}
 
 @apisheduler.get('/sheduler/volatilite')
@@ -92,6 +92,7 @@ async def action():
         await update_volatilite_for_ecah_crypto()
         await set_liste_crypto_with_weight()
         await set_var()
+        await set_info_crypto()
 
     asyncio.create_task(run_all())
     return {"message": "tasks running in background"}
@@ -200,3 +201,7 @@ async def get_crypto_coin_gecko_correled_with_binance():
 async def set_index_between_dates(start_date, end_date):
     return await indexService.generate_index_between_dates(start_date, end_date)
     return {"message":"index between dates done"}
+
+@apisheduler.get('/sheduler/getliste_crypto_for_volatility')
+async def getliste_crypto_for_volatility():
+    return await coinGeckoService.get_liste_crypto_filtered()

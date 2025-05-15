@@ -213,6 +213,17 @@ class CryptoService:
         """Combine CoinGecko and CoinMarketCap data and save to JSON."""
         liste_coin_gecko = await coinGeckoService.set_liste_no_folter_to_json()
         liste_coin_market_cap = await callCoinMarketApi.get_liste_crypto_unfiltered()
+        liste_coin_with_weight = await coinGeckoService.get_liste_crypto_with_weight()
+        
+        for item in liste_coin_with_weight:
+            for item2 in liste_coin_gecko:
+                if item["id"] == item2["id"]:
+                    item["market_cap"] = item2["market_cap"]
+                    break
+        
+        
+        async with aiofiles.open('app/json/liste_crypto/listeCryptoWithWeight.json', 'w', encoding='utf-8') as f:
+            await f.write(json.dumps(liste_coin_with_weight, indent=4))
 
         liste_crypto = []
         for item in liste_coin_gecko:
@@ -223,7 +234,7 @@ class CryptoService:
                     break
 
         liste_crypto = list({v['id']: v for v in liste_crypto}.values())
-
+        
         os.makedirs('app/json/crypto/info', exist_ok=True)
         async with aiofiles.open('app/json/crypto/info/crypto.json', 'w', encoding='utf-8') as f:
             await f.write(json.dumps(liste_crypto, indent=4, ensure_ascii=False))
@@ -238,7 +249,11 @@ class CryptoService:
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=500, detail=f"Failed to parse crypto info: {e}")
 
-        liste = sorted(liste, key=lambda x: x["market_cap"], reverse=True)
+        # liste = sorted(liste, key=lambda x: x.get("market_cap", 0), reverse=True)
+        # liste = sorted(liste, key=lambda x: (x["market_cap"] is None, x["market_cap"] or 0), reverse=True)
+        liste = sorted(liste, key=lambda x: (x["market_cap"] is None, x["market_cap"] if x["market_cap"] is not None else 0), reverse=True)
+
+    
         quantite_de_donnees = len(liste)
         nombre_de_page = -(-len(liste) // quantity)
         liste = liste[(page - 1) * quantity:page * quantity]
@@ -271,12 +286,22 @@ class CryptoService:
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=500, detail=f"Failed to parse crypto info: {e}")
 
-        liste = sorted(liste, key=lambda x: x["market_cap"], reverse=True)
+        # Apply filtering first
         if text:
             liste = [item for item in liste if text.lower() in item["name"].lower() or text.lower() in item["symbol"].lower()]
 
+        # Separate by market_cap presence
+        with_market_cap = [coin for coin in liste if coin["market_cap"] is not None]
+        without_market_cap = [coin for coin in liste if coin["market_cap"] is None]
+
+        # Sort only the ones with market_cap
+        with_market_cap.sort(key=lambda x: x["market_cap"], reverse=True)
+
+        # Combine with market cap coins first, then those without
+        liste = with_market_cap + without_market_cap
+
         quantite_de_donnees = len(liste)
-        nombre_de_page = -(-len(liste) // quantity)
+        nombre_de_page = -(-quantite_de_donnees // quantity)
         liste = liste[(page - 1) * quantity:page * quantity]
 
         return {
@@ -285,6 +310,7 @@ class CryptoService:
             "page": page,
             "liste": liste,
         }
+
 
     async def refresh_price_one_crypto(self, crypto, liste_crypto_nofilter):
         """Update price for a single crypto and append to price history."""

@@ -29,7 +29,7 @@ class CoinGeckoService:
         params = {
             "vs_currency": "usd",
             "per_page": 250,
-            "category": categorie_id,
+            # "category": categorie_id,
             "page": page,
             "order": "market_cap_desc",
         }
@@ -77,8 +77,9 @@ class CoinGeckoService:
                 coin["symbol"].lower() not in wrapped_tokens and
                 coin["current_price"] is not None and
                 coin["market_cap"] > 0 and
-                coin["price_change_percentage_24h"] is not None and
-                (coin["total_volume"] is not None and coin["total_volume"] >= 2000000))
+                coin["price_change_percentage_24h"] is not None 
+                and (coin["total_volume"] is not None and coin["total_volume"] >= 2000000)
+                )
         ]
         
         return filtered
@@ -87,7 +88,8 @@ class CoinGeckoService:
         list_crypto_page_1 = await self.get_liste_crypto(page=1)
         list_crypto_page_2 = await self.get_liste_crypto(page=2)
         list_crypto_page_3 = await self.get_liste_crypto(page=3)
-        list_crypto = list_crypto_page_1 + list_crypto_page_2 + list_crypto_page_3
+        list_crypto_page_4 = await self.get_liste_crypto(page=4)
+        list_crypto = list_crypto_page_1 + list_crypto_page_2 + list_crypto_page_3 + list_crypto_page_4 
 
         list_crypto = await self.excludeStableCoin(list_crypto)
         
@@ -141,7 +143,7 @@ class CoinGeckoService:
         prices = data['prices']
         df = pd.DataFrame(prices, columns=['timestamp', 'price'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df['price'] = df['price'].round(2)
+        df['price'] = df['price']
         
         return df[['date', 'price']]
 
@@ -296,33 +298,43 @@ class CoinGeckoService:
 
     async def schedule_liste_crypto_with_weight_volatility(self):
         listeCrypto = await self.get_liste_crypto_filtered()
+        # return len(listeCrypto)
+        # oreder by market cap
+        listeCrypto = sorted(listeCrypto, key=lambda x: x['market_cap'], reverse=True)
+        listeCrypto = listeCrypto[:80]
         liste_market_cap = []
+        i=0
         for el in listeCrypto:
+            if i%20 == 0 and i != 0:
+                await asyncio.sleep(60)
             market_cap = await self.get_market_cap(el.get("id"))
             liste_market_cap.append(market_cap)
+            i+=1
         
-        liste_weight = calculService.normalize_weights(liste_market_cap)
-        liste_weight = calculService.round_weights(liste_weight)
+        liste_weight = await calculService.normalize_weights(liste_market_cap)
+        liste_weight = await calculService.round_weights(liste_weight)
         
         liste_new = []
         for i in range(len(listeCrypto)):
+            if i % 20 == 0 and i != 0:
+                await asyncio.sleep(60)
             historique = await self.get_historical_prices(listeCrypto[i]["id"], "usd", 90)
             
-            if len(historique) > 90 and listeCrypto[i]["market_cap"] > 0:
-                liste_volatilite = await calculService.getListeVolatilite(historique)
-                volatiliteJ = liste_volatilite[1]
-                volatiliteJ2 = liste_volatilite[2]
-                variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
-                
-                listeCrypto[i]["volatiliteJournaliere"] = volatiliteJ
-                listeCrypto[i]['variationj1'] = variationJ1
-                listeCrypto[i]["volatiliteAnnuel"] = volatiliteJ * np.sqrt(365)
-                listeCrypto[i]['weight'] = str(liste_weight[i])
-                liste_new.append(listeCrypto[i])
+            # if len(historique) > 90 and listeCrypto[i]["market_cap"] > 0:
+            liste_volatilite = await calculService.getListeVolatilite(historique)
+            volatiliteJ = liste_volatilite[1]
+            volatiliteJ2 = liste_volatilite[2]
+            variationJ1 = (volatiliteJ - volatiliteJ2) / volatiliteJ2
+            
+            listeCrypto[i]["volatiliteJournaliere"] = volatiliteJ
+            listeCrypto[i]['variationj1'] = variationJ1
+            listeCrypto[i]["volatiliteAnnuel"] = volatiliteJ * np.sqrt(365)
+            listeCrypto[i]['weight'] = str(liste_weight[i])
+            liste_new.append(listeCrypto[i])
         
         async with aiofiles.open('app/json/liste_crypto/listeCryptoWithWeight.json', 'w', encoding='utf-8') as f:
             await f.write(json.dumps(liste_new, indent=4))
-        
+        # return len(liste_new)
         return liste_new
 
     async def get_liste_crypto_with_weight(self):
@@ -335,6 +347,7 @@ class CoinGeckoService:
             for el2 in liste_no_filter:
                 if el['id'] == el2['id']:
                     el['volume_24h'] = el2['volume_24h']
+                    el['current_price'] = el2['current_price']
                     break
         
         return liste
