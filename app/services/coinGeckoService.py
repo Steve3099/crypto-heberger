@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal, getcontext
+import http
 import json
 import requests
 import pandas as pd
@@ -7,12 +8,20 @@ import numpy as np
 import time
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.calculService import CalculService
-
+from fastapi import HTTPException
+import os
+from pathlib import Path
 coinMarketApi  = CallCoinMarketApi()
 calculService = CalculService()
 
+# get the key from the environnement variable or .env file
+from dotenv import load_dotenv
+BASE_DIR = Path(__file__).resolve().parent.parent 
+load_dotenv(BASE_DIR / ".env")
+key = os.getenv("key_coin_gecko")
+
 # key = "CG-pq44GDj1HKecURw2UA1uUYz8"
-key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
+# key = "CG-uviXoVTxQUerBoCeZfuJ6c5y"
 class CoinGeckoService:
     async def get_liste_crypto(self,categorie_id="layer-1",page=1):
         url = "https://api.coingecko.com/api/v3/coins/markets"
@@ -105,8 +114,7 @@ class CoinGeckoService:
             
             return df[['date', 'price']]  # Return only date and price
 
-        except Exception as e:
-            print(f"Error: {e}")
+        except FileNotFoundError:
             url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
             params = {
                 'vs_currency': vs_currency,
@@ -232,9 +240,9 @@ class CoinGeckoService:
         return retour
     
     async def set_historical_price_to_json(self,crypto, vs_currency='usd', days=90):
-        
-        
-        
+        # print(os.environ)
+        # print(key)
+        # return key
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
         params = {
             'vs_currency': vs_currency,
@@ -248,13 +256,21 @@ class CoinGeckoService:
         response = requests.get(url, headers=headers, params=params)
         data = response.json()
         prices = data['prices']
+        market_cap = data['market_caps']
         df = pd.DataFrame(prices, columns=['timestamp', 'price'])
         df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
         df['price'] = df['price'].round(8)
         
+        lf = pd.DataFrame(market_cap, columns=['timestamp', 'market_cap'])
+        lf['date'] = pd.to_datetime(lf['timestamp'], unit='ms')
+        lf['market_cap'] = lf['market_cap'].round(2)
+        
         # put historique on json file dans un fichier json
         with open('app/historique_prix_json/'+crypto+'_historique.json', 'w') as f:
             f.write(df.to_json(date_format="iso", orient="records", indent=4))
+        
+        with open('app/json/crypto/market_cap/'+crypto+'_market_cap.json', 'w') as f:
+            f.write(lf.to_json(date_format="iso", orient="records", indent=4))
     
     async def set_market_cap_to_json(self,crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
@@ -281,7 +297,7 @@ class CoinGeckoService:
             await self.set_historical_price_to_json(liste_crypto[i].get('id'))
             print(f"historique {liste_crypto[i].get('id')} done")
             
-            if i%10 == 0:
+            if i%20 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     
@@ -292,7 +308,7 @@ class CoinGeckoService:
             await self.set_market_cap_to_json(liste_crypto[i].get('id'))
             print(f"market cap {liste_crypto[i].get('id')} done")
             
-            if i%10 == 0:
+            if i%20 == 0 and i!= 0:
                 # sleep 1 minute
                 time.sleep(60)
     async def schedule_liste_crypto_with_weight_volatility(self):
@@ -343,7 +359,7 @@ class CoinGeckoService:
         liste_crypto = []
         i = 1
         t = True
-        while i <= 10:
+        while i <= 61:
             try:
                 temp = await self.get_liste_crypto_no_filtre(page=i)
                 print("page " + str(i)   )
@@ -355,11 +371,12 @@ class CoinGeckoService:
                     # stop the while loop
                     t = False
                     break
-                if i%10 ==0 and i!= 0:
+                if i%20 ==0 and i!= 0:
                     time.sleep(60)
             except Exception as e:
-                print(e)
-                
+                raise HTTPException(status_code=404, detail=str(e))
+        return liste_crypto
+        
         with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'w', encoding='utf-8') as f:
             json.dump(liste_crypto, f, indent=4)
         return liste_crypto
@@ -368,3 +385,5 @@ class CoinGeckoService:
         with open('app/json/liste_crypto/listeCryptoNoFiltre.json', 'r', encoding='utf-8') as f:
             liste = json.load(f)
         return liste
+    
+    

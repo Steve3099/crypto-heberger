@@ -1,7 +1,12 @@
 import json
 import requests
-
-key = "d85a5f07-d675-48f5-8e8e-e9617ae7fcf3"
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+BASE_DIR = Path(__file__).resolve().parent.parent 
+load_dotenv(BASE_DIR / ".env")
+key = os.getenv("key_coin_market_cap")
+# key = "d85a5f07-d675-48f5-8e8e-e9617ae7fcf3"
 
 class CallCoinMarketApi():
     async def getFearAndGreed(self):
@@ -12,6 +17,9 @@ class CallCoinMarketApi():
         }
         response = requests.get(url,headers=headers)
         retour = json.loads(response.text)
+        #  set fear and greed to json 
+        with open("app/json/fearAndGreed/fearAndGreed.json","w") as f:
+            f.write(json.dumps(retour.get("data",{})))
         return retour.get("data",{})
     
     async def get_liste_stablecoins(self):
@@ -67,11 +75,12 @@ class CallCoinMarketApi():
         
         return liste_stablecoins
     
-    async def get_list_cryptos(self):
+    async def get_list_cryptos(self,limit = 5000,start = 1):
         
         url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
         params = {
-            "id": id_Categorie
+            "start": start,
+            "limit": limit
         }
         headers = {
             "accept": "application/json",
@@ -80,6 +89,8 @@ class CallCoinMarketApi():
         response = requests.get(url, headers=headers, params=params)
         data = json.loads(response.text)
         data = data.get("data")
+        # return data
+        liste_crypto = []
         for item in data:
             crypto = {
                 "id": item.get("slug"),
@@ -90,25 +101,15 @@ class CallCoinMarketApi():
                 "market_cap": item.get("quote").get("USD").get("market_cap"),
                 
                 # "market_cap_rank": 1,
-                
-                "fully_diluted_valuation": 1698676356870,
-                "total_volume": 24899411400,
-                "high_24h": 86434,
-                "low_24h": 84340,
-                "price_change_24h": -348.3227308636415,
-                "price_change_percentage_24h": -0.4048,
-                "market_cap_change_24h": -8152368438.560791,
-                "market_cap_change_percentage_24h": -0.47763,
-                "circulating_supply": 19831121.0,
-                "total_supply": 19831121.0,
-                "max_supply": 21000000.0,
-                "ath": 108786,
-                "ath_change_percentage": -21.22906,
-                "ath_date": "2025-01-20T09:11:54.494Z",
-                "atl": 67.81,
-                "atl_change_percentage": 126271.70206,
-                "atl_date": "2013-07-06T00:00:00.000Z",
-                "roi": null,
-                "last_updated": "2025-03-02T05:05:55.856Z"
+                "volume_24h": item.get("quote").get("USD").get("volume_24h"),
+                "price_change_24h": item.get("quote").get("USD").get("percent_change_24h"),
                 
             }
+            liste_crypto.append(crypto)
+        return liste_crypto
+    
+    async def get_liste_cypto_ufiltered(self):
+        liste = await self.get_list_cryptos()
+        liste += await self.get_list_cryptos(start = 5001)
+        liste += await self.get_list_cryptos(start = 10001)
+        return liste

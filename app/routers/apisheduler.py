@@ -3,12 +3,18 @@ from fastapi import APIRouter
 from app.services.coinGeckoService import CoinGeckoService
 from app.services.indexService import IndexService
 from app.services.voaltiliteService import VolatiliteService
+from app.services.cryptoService import CryptoService
+from app.services.skeuness_kurtoService import Skewness_KurtoService
+from app.services.callCoinMarketApi import CallCoinMarketApi
 
 apisheduler = APIRouter()
 indexService = IndexService()
 coinGeckoService = CoinGeckoService()
 volatileService = VolatiliteService()
 varService = VarService()
+cryptoService = CryptoService()
+skewness_kurtoService = Skewness_KurtoService()
+callCoinMArketApi = CallCoinMarketApi()
 
 @apisheduler.get("/sheduler/listeprix")
 async def set_liste_prix():
@@ -62,18 +68,25 @@ async def update_volatilite_for_ecah_crypto():
 
 @apisheduler.get('/sheduler/action')
 async def action():
+    await set_fear_and_greed()
     await set_liste_prix()
     await set_market_cap()
     await update_volatilite_generale()
     await update_volatilite_for_ecah_crypto()
-    await set_liste_sans_filtre()
+    # await set_liste_sans_filtre()
     await set_liste_crypto_with_weight()
     await set_var()
+    await cryptoService.set_info_crypto()
+    return {"message":"action done"}
+
+@apisheduler.get('/sheduler/set_info_crypto')
+async def set_info_crypto():
+    await cryptoService.set_info_crypto()
     return {"message":"action done"}
 
 @apisheduler.get('/sheduler/set_var')
 async def set_var():
-    return await varService.update_var()
+    return await varService.update_var_v2()
     # return {"message":"var done"}
 
 @apisheduler.get('/sheduler/set_vollatilite_annuel')
@@ -101,3 +114,22 @@ async def set_historique_prix_for_one_crypto(id):
         await coinGeckoService.set_historical_price_to_json(id)
     # return await coinGeckoService.set_historical_price_to_json(id)
     # return {"message":"var done"}
+    
+@apisheduler.get('/sheduler/set_historique_market_cap_for_one_crypto')
+async def set_historique_market_cap_generale():
+    return await cryptoService.set_historique_market_cap_generale()
+
+@apisheduler.get('/sheduler/set_skewness_kurto')
+async def set_skewness_kurto():
+    return await skewness_kurtoService.set_skewness_kurto()
+    # return {"message":"var done"}
+    
+@apisheduler.get('/sheduler/get_list_cryptos')
+async def get_list_cryptos():
+    await cryptoService.set_info_crypto()
+    return "done"
+    # print(len(await coinGeckoService.set_liste_no_folter_to_json()))
+    # return await callCoinMArketApi.get_liste_cypto_ufiltered()
+async def set_fear_and_greed():
+    await callCoinMArketApi.getFearAndGreed()
+    return "fear and greed done"
