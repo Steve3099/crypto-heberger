@@ -1,4 +1,3 @@
-#class cacluclService
 from decimal import Decimal
 import json
 import math
@@ -7,232 +6,176 @@ import numpy as np
 from app.services.callApiService import getHistorique
 
 class CalculService:
-    def calculRendements(self,prixF,prixAf):
-        #call function logarythme
-        return math.log(prixF/prixAf)
-    
-    def calculVolatilliteJournaliere(self,listePrix):
-        
-        # mettre liste prix dans un dataFrame
-        listePrix = pd.DataFrame(listePrix,columns=['date','price'])
-        
-        # cacul rendement et la somme des rendement
+    async def calculRendements(self, prixF, prixAf):
+        """Calculate logarithmic returns asynchronously."""
+        return math.log(prixF / prixAf)
+
+    async def calculVolatilliteJournaliere(self, listePrix):
+        """Calculate daily volatility from a list of prices asynchronously."""
+        # Convert listePrix to DataFrame
+        listePrix = pd.DataFrame(listePrix, columns=['date', 'price'])
+
+        # Calculate log returns
         listePrix['log_return'] = np.log(listePrix['price'] / listePrix['price'].shift(1))
-        
-        # Supprimer les valeurs NaN
+
+        # Drop NaN values
         listePrix.dropna(inplace=True)
-        
-        # Calcul de la volatilité historique
-        volatilite  = listePrix['log_return'].std()
-        
+
+        # Calculate historical volatility
+        volatilite = listePrix['log_return'].std()
+
         return volatilite
-    
-    async def getListeVolatilite(self,listePrix):
+
+    async def getListeVolatilite(self, listePrix):
+        """Calculate a list of volatilities by progressively reducing the price list."""
         listeVolatilite = []
-        indice = 0
-        for i in range(len(listePrix)-2):
-            if indice == 0:
-                listeVolatilite.append(self.calculVolatilliteJournaliere(listePrix))
-            else:
-                price = listePrix[:-indice]
-                listeVolatilite.append(self.calculVolatilliteJournaliere(price))
-            indice += 1    
+        for i in range(len(listePrix) - 2):
+            price = listePrix[:-i] if i > 0 else listePrix
+            volatilite = await self.calculVolatilliteJournaliere(price)
+            listeVolatilite.append(volatilite)
         return listeVolatilite
-        
-    
-    def top10volatiliteJournaliere(self,listeCrypto):
-        listeVolatilite= []
-        i = 0;
-        for el in listeCrypto:
-            # a changer
-            if i < 10:
-                
-                historique = getHistorique(coin = el.get("id",''))
-                # print(len(historique))
+
+    async def top10volatiliteJournaliere(self, listeCrypto):
+        """Calculate daily and annual volatility for the top 10 cryptocurrencies."""
+        listeVolatilite = []
+        for i, el in enumerate(listeCrypto[:10]):
+            try:
+                # Fetch historical prices asynchronously
+                historique = await getHistorique(coin=el.get("id", ""))
                 historique_data = json.loads(historique)
-                # Extract prices
-                prices = historique_data.get("prices", [])
-                #calcul volatilite
-                prices = [price[1] for price in prices]
-                volatilite = self.calculVolatilliteJournaliere(prices)
+                prices = [price[1] for price in historique_data.get("prices", [])]
+                volatilite = await self.calculVolatilliteJournaliere(pd.DataFrame({
+                    'date': [price[0] for price in historique_data.get("prices", [])],
+                    'price': prices
+                }))
                 retour = {
-                    "coin":el,
+                    "coin": el,
                     "volatiliteJournaliere": volatilite,
-                    "volatiliteAnnuel" : volatilite * math.sqrt(365)
+                    "volatiliteAnnuel": volatilite * math.sqrt(365)
                 }
                 listeVolatilite.append(retour)
-                i+=1
-            else:
-                break
-            
-        # sort list desc by volatilite
-        
-        listeVolatilite.sort(key=lambda x: x.get("volatiliteJournaliere",0),reverse=True)
-        
+            except Exception as e:
+                print(f"Error calculating volatility for {el.get('id')}: {e}")
+                continue
+
+        # Sort by daily volatility in descending order
+        listeVolatilite.sort(key=lambda x: x.get("volatiliteJournaliere", 0), reverse=True)
         return listeVolatilite
-    
-    
-    async def top5CroissanceDevroissance(self,listeCrypto):
-        # sort list desc by price_change_24h
-        
-        listeCrypto.sort(key=lambda x: x.get("price_change_percentage_24h",0),reverse=True)
-        retour = {
+
+    async def top5CroissanceDecroissance(self, listeCrypto):
+        """Return top 5 growing and declining cryptos based on 24h price change."""
+        listeCrypto = listeCrypto.copy()  # Avoid modifying the input list
+        listeCrypto.sort(key=lambda x: x.get("price_change_percentage_24h", 0), reverse=True)
+        return {
             "top5Croissance": listeCrypto[:5],
             "top5Decroissance": listeCrypto[-5:]
         }
-        
-        return retour
-    
-    def getListePrix(self, listeCrypto = []):
+
+    async def getListePrix(self, listeCrypto=[]):
+        """Fetch historical prices for up to 10 cryptocurrencies."""
         listeRetour = []
-        i = 0;
-        for el in listeCrypto:
-            # a changer
-            if i < 10:
-                historique = getHistorique(days = 90,coin = el.get("id",''))
-                
+        for i, el in enumerate(listeCrypto[:10]):
+            try:
+                historique = await getHistorique(days=90, coin=el.get("id", ""))
                 historique_data = json.loads(historique)
-                
-                # Extract prices
-                prices = historique_data.get("prices", [])
-                #calcul volatilite
-                prices = [price[1] for price in prices]
-                
+                prices = [price[1] for price in historique_data.get("prices", [])]
                 listeRetour.append(prices)
-                i+=1
-            else:
-                break
-            
+            except Exception as e:
+                print(f"Error fetching prices for {el.get('id')}: {e}")
+                continue
         return listeRetour
-    async def getvolatilitePortefeuil(self,listeCrypto,listePrix):
-        # calcul matrice de covariances
-        sommeTotale = 0
+
+    async def getvolatilitePortefeuil(self, listeCrypto, listePrix):
+        """Calculate portfolio volatility and covariance matrix."""
+        sommeTotale = Decimal('0')
         rows = len(listeCrypto)
         cols = len(listeCrypto)
-        matrice = [[-1 for _ in range(cols)] for _ in range(rows)]
-        for i in range(0,len(listePrix)):
-            volatiliteI = await self.getListeVolatilite(listePrix[i])
-            wheightI = listeCrypto[i].get("weight",0)
-            sommeI = 0
-            for j in range(0,len(listePrix)):
-                if i == j:
-                    volatiliteJ = volatiliteI
-                else:
-                    volatiliteJ = await self.getListeVolatilite(listePrix[j])
-                wheightJ = listeCrypto[j].get("weight",0)
-                produit =0
-                for k in range(0,len(volatiliteJ)):
-                    produit += volatiliteI[k] * volatiliteJ[k]
-                
-                sommeI += Decimal(produit / len(volatiliteJ)) * wheightI * wheightJ
-                matrice[i][j] = sommeI
-                matrice[j][i] = sommeI
-            # print(matrice[i])
-            sommeTotale += sommeI
-        volatilitePortefeuil = math.sqrt(sommeTotale)
-                # matrice.append(result)
-                
-        return volatilitePortefeuil,matrice
-    
-    def getHistoriqueVolatiliteGenerale(self,nombrejour,listeCrypto,listePrix):
-        
-        listVolatilitePortefeuille = []
-        for i in range(0,nombrejour-2):
-            if len(listePrix[0]) >= 3:
-                res,matrice = self.getvolatilitePortefeuil(listeCrypto,listePrix)
-                listVolatilitePortefeuille.append(res)
-                listePrix = self.removeFirstLine(listePrix)
-        return listVolatilitePortefeuille
-    
-    def removeFirstLine(self,listePrix):
-        listeRetour = []
-        # remove firs line of each element in listeprix
-        for el in listePrix:
-            listeRetour.append(el[1:])
-        
-        return listeRetour
-    
-    def normalize_weights(self,liste_crypto_market_cap):
-        total_market_cap = 0
-    
-        for i in range(len(liste_crypto_market_cap)):
-            total_market_cap += liste_crypto_market_cap[i]
-    
-        liste_crypto_weight = []
-        for i in range(len(liste_crypto_market_cap)):
-            weight = liste_crypto_market_cap[i] / total_market_cap
-            liste_crypto_weight.append(weight)
-        return liste_crypto_weight
+        matrice = [[Decimal('0') for _ in range(cols)] for _ in range(rows)]
 
-    def round_weights(self,liste_weight):
-        somme_weight = 0
-        for i in range(len(liste_weight)):
-            liste_weight[i] = Decimal(str(round(liste_weight[i], 4)))
-            somme_weight += liste_weight[i]
-        if somme_weight != 1.0:
-            error = Decimal('1.0') - Decimal(str(somme_weight))
-            min_weight = min(liste_weight)
-            index_min = liste_weight.index(min_weight)
-            
-            if error > 0:
-                liste_weight[index_min] = Decimal(str(liste_weight[index_min])) + Decimal(str(error))
+        for i in range(len(listePrix)):
+            volatiliteI = await self.getListeVolatilite(listePrix[i])
+            wheightI = Decimal(str(listeCrypto[i].get("weight", 0)))
+            for j in range(len(listePrix)):
+                volatiliteJ = volatiliteI if i == j else await self.getListeVolatilite(listePrix[j])
+                wheightJ = Decimal(str(listeCrypto[j].get("weight", 0)))
+                produit = sum(volatiliteI[k] * volatiliteJ[k] for k in range(len(volatiliteJ)))
+                covariance = Decimal(str(produit / len(volatiliteJ)))
+                matrice[i][j] = covariance
+                matrice[j][i] = covariance
+                sommeTotale += covariance * wheightI * wheightJ
+
+        volatilitePortefeuil = math.sqrt(float(sommeTotale))
+        return volatilitePortefeuil, matrice
+
+    async def getHistoriqueVolatiliteGenerale(self, nombrejour, listeCrypto, listePrix):
+        """Calculate historical portfolio volatility over a number of days."""
+        listVolatilitePortefeuille = []
+        for _ in range(nombrejour - 2):
+            if len(listePrix[0]) >= 3:
+                res, matrice = await self.getvolatilitePortefeuil(listeCrypto, listePrix)
+                listVolatilitePortefeuille.append(res)
+                listePrix = await self.removeFirstLine(listePrix)
             else:
-                liste_weight[index_min] = Decimal(str(liste_weight[index_min])) - Decimal(str(error))
-        return liste_weight
-    
-    def calculate_statistics(self,liste_price,liste_crypto,liste_weight):
-        # Joindre les datasets des liste  sur les dates and add suffixe (liste_crypto[i].get("name"))
-    
+                break
+        return listVolatilitePortefeuille
+
+    async def removeFirstLine(self, listePrix):
+        """Remove the first price entry from each price list."""
+        return [el[1:] for el in listePrix]
+
+    async def normalize_weights(self, liste_crypto_market_cap):
+        """Normalize market cap weights to sum to 1."""
+        total_market_cap = sum(liste_crypto_market_cap)
+        if total_market_cap == 0:
+            return [0] * len(liste_crypto_market_cap)
+        return [market_cap / total_market_cap for market_cap in liste_crypto_market_cap]
+
+    async def round_weights(self, liste_weight):
+        """Round weights and adjust to ensure they sum to 1."""
+        somme_weight = Decimal('0')
+        rounded_weights = []
+        for weight in liste_weight:
+            rounded = Decimal(str(round(weight, 4)))
+            rounded_weights.append(rounded)
+            somme_weight += rounded
+
+        if somme_weight != 1:
+            error = Decimal('1.0') - somme_weight
+            min_weight = min(rounded_weights)
+            index_min = rounded_weights.index(min_weight)
+            rounded_weights[index_min] += error
+
+        return rounded_weights
+
+    async def calculate_statistics(self, liste_price, liste_crypto, liste_weight):
+        """Calculate volatility, portfolio volatility, and covariance matrix."""
         merged = liste_price[0].rename(columns={'price': 'price_' + liste_crypto[0].get("id")})
         for i in range(1, len(liste_price)):
-        # Ensure the 'date' column in both DataFrames is in datetime format
             liste_price[i]['date'] = pd.to_datetime(liste_price[i]['date'])
             merged['date'] = pd.to_datetime(merged['date'])
-            
-            # Rename the 'price' column
             liste_price[i] = liste_price[i].rename(columns={'price': 'price_' + liste_crypto[i].get("id")})
-            
-            # Merge on the 'date' column
             merged = pd.merge(merged, liste_price[i], on='date')
-        
-        # Dictionary to store new columns
+
         new_columns = {}
-        
         for crypto in liste_crypto:
             crypto_id = crypto.get("id")
             new_columns[crypto_id] = np.log(
                 merged[f'price_{crypto_id}'] / merged[f'price_{crypto_id}'].shift(1)
             )
-            
 
-        # Convert dictionary to DataFrame and concatenate once
-        merged = pd.concat([merged, pd.DataFrame(new_columns)], axis=1)
-
-        # Optional: Copy the DataFrame to remove fragmentation
-        merged = merged.copy()
-        # Supprimer les valeurs NaN
+        merged = pd.concat([merged, pd.DataFrame(new_columns)], axis=1).copy()
         merged.dropna(inplace=True)
-        merged.fillna(0, inplace=True)  # Replace NaNs with 0
-        # return 0,0,0
-        # Calcul de la volatilité historique
-        liste_volatilite = []
-        for i in range(len(liste_crypto)):
-            vol = merged[liste_crypto[i].get("id")].std()
-            liste_volatilite.append(vol)
-         
-        
-        covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].dropna(how="any").cov()
+        merged.fillna(0, inplace=True)
 
-        # Méthode matricielle (plus précise)
-        weights = np.array([float(w) for w in liste_weight])  # Convertir en float
-
+        liste_volatilite = [merged[crypto.get("id")].std() for crypto in liste_crypto]
+        covariance_matrix = merged[[crypto.get("id") for crypto in liste_crypto]].cov()
+        weights = np.array([float(w) for w in liste_weight])
         portfolio_volatility_mat = np.sqrt(weights.T @ covariance_matrix.values @ weights)
-        
-        return liste_volatilite, portfolio_volatility_mat,covariance_matrix
-        
-    
-    def calculate_correlation_matrix(self,covariance_matrix):
+
+        return liste_volatilite, portfolio_volatility_mat, covariance_matrix
+
+    async def calculate_correlation_matrix(self, covariance_matrix):
+        """Calculate correlation matrix from covariance matrix."""
         std_devs = np.sqrt(np.diag(covariance_matrix))
         correlation_matrix = covariance_matrix / np.outer(std_devs, std_devs)
         return correlation_matrix
-    

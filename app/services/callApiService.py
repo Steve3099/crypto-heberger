@@ -1,26 +1,19 @@
-import requests
+import aiohttp
 import json
+import asyncio
 
-#coinGecko API 
-# key = CG-uviXoVTxQUerBoCeZfuJ6c5y
-# URL :
-# . Coins List : https://api.coingecko.com/api/v3/coins/list
-# . Coins List with Market Data : https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd
-# . historiques : https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=eur&days=5
-
-
-def callApi(self, url: str, method: str, headers: dict, body: dict):
+async def callApi(url: str, method: str, headers: dict, body: dict):
+    """Make an async API request."""
     try:
-        response = requests.request(method, url, headers=headers, json=body)
-        return response
+        async with aiohttp.ClientSession() as session:
+            async with session.request(method, url, headers=headers, json=body) as response:
+                return await response.text()
     except Exception as e:
-        print(e)
+        print(f"Error in callApi: {e}")
         return None
-    
 
-
-def getHistorique(days: int = 90,coin:str ="bitcoin"):
-    
+async def getHistorique(days: int = 90, coin: str = "bitcoin"):
+    """Fetch historical price data for a coin from CoinGecko."""
     url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
     
     params = {
@@ -32,14 +25,21 @@ def getHistorique(days: int = 90,coin:str ="bitcoin"):
         "accept": "application/json",
         "x-cg-demo-api-key": "CG-uviXoVTxQUerBoCeZfuJ6c5y"
     }
-    session = requests.Session()
-    request = requests.Request('GET', url, headers=headers, params=params)
-    prepared_request = session.prepare_request(request)
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as response:
+                if response.status == 200:
+                    return await response.text()
+                else:
+                    print(f"Error in getHistorique: HTTP {response.status}")
+                    return ""
+    except Exception as e:
+        print(f"Error in getHistorique: {e}")
+        return ""
 
-    response = session.send(prepared_request)
-    return response.text
-
-def getSimpleGeckoApi():
+async def getSimpleGeckoApi():
+    """Fetch simple price data for Bitcoin and Ethereum from CoinGecko."""
     url = "https://api.coingecko.com/api/v3/simple/price"
 
     params = {
@@ -56,12 +56,20 @@ def getSimpleGeckoApi():
         "x-cg-demo-api-key": "CG-uviXoVTxQUerBoCeZfuJ6c5y"
     }
 
-    response = requests.get(url, headers=headers, params=params)
-    #transform the result to json
-    retour = json.loads(response.text)
-    return retour
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    print(f"Error in getSimpleGeckoApi: HTTP {response.status}")
+                    return {}
+    except Exception as e:
+        print(f"Error in getSimpleGeckoApi: {e}")
+        return {}
 
-def getHistoriqueOneMonthAgo(self,coin:str ="bitcoin"):
+async def getHistoriqueOneMonthAgo(coin: str = "bitcoin"):
+    """Fetch 90 days of historical price data for a coin in EUR from CoinGecko."""
     url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart"
     
     params = {
@@ -73,9 +81,15 @@ def getHistoriqueOneMonthAgo(self,coin:str ="bitcoin"):
         "accept": "application/json",
         "x-cg-demo-api-key": "CG-uviXoVTxQUerBoCeZfuJ6c5y"
     }
-    session = requests.Session()
-    request = requests.Request('GET', url, headers=headers, params=params)
-    prepared_request = session.prepare_request(request)
-
-    response = session.send(prepared_request)
-    return response.text
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as response:
+                if response.status == 200:
+                    return await response.text()
+                else:
+                    print(f"Error in getHistoriqueOneMonthAgo: HTTP {response.status}")
+                    return ""
+    except Exception as e:
+        print(f"Error in getHistoriqueOneMonthAgo: {e}")
+        return ""
