@@ -96,7 +96,7 @@ async def getTop5Corissance():
 
 @cryptorouter.get("/weights")  
 async def getListeCryptoAvecPoids():
-    val =await coinGeckoService.get_liste_crypto_with_weight()
+    val =await cryptoService.get_liste_crypto_with_weight()
     #  order val by weight descending
     val.sort(key=lambda x: x.get("weight",0),reverse=True)
     
@@ -202,3 +202,19 @@ async def search_crypto(search: str,page: int = 1,quantity: int = 50):
 async def get_global_data():
     return await coinGeckoService.get_global_data_from_json()
 
+
+@cryptorouter.get("/bitcoin_dominance")
+async def get_bitcoin_dominance(date_start="2024-05-16", date_end=None):
+    try:
+        bitcoin_dominance = await cryptoService.get_bit_coin_dominace_between_2_dates(date_start, date_end)
+        return bitcoin_dominance
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching Bitcoin dominance: {str(e)}")
+
+@cryptorouter.get("/crypto/liste")
+async def get_liste_crypto():
+    try:
+        liste = await cryptoService.get_liste_crypto_updated()
+        return liste
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching crypto list: {str(e)}")

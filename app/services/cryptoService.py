@@ -58,10 +58,10 @@ class CryptoService:
             raise HTTPException(status_code=400, detail="date_start should be less than date_end")
 
         crypto = await self.check_if_crypto_in_binance(id)
-        if crypto:
-            liste = await self.get_liste_price_binance_from_json(crypto)
-        else:
-            liste = await self.get_liste_prix_from_json(id)
+        # if crypto:
+        #     liste = await self.get_liste_price_binance_from_json(crypto)
+        # else:
+        liste =  await self.get_liste_prix_from_json(id)
 
         return [item for item in liste if item["date"] >= date_start and item["date"] <= date_end]
 
@@ -219,6 +219,7 @@ class CryptoService:
             for item2 in liste_coin_gecko:
                 if item["id"] == item2["id"]:
                     item["market_cap"] = item2["market_cap"]
+                    item["price_change_percentage_24h"] = item2["price_change_percentage_24h"]
                     break
         
         
@@ -279,8 +280,10 @@ class CryptoService:
     async def search_crypto_by_text(self, text, page, quantity):
         """Search cryptos by name or symbol with pagination."""
         try:
-            async with aiofiles.open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
-                liste = json.loads(await f.read())
+            liste  = await self.get_liste_crypto_updated()
+            # return liste[:10]
+            # async with aiofiles.open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
+            #     liste = json.loads(await f.read())
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Crypto info file not found")
         except json.JSONDecodeError as e:
@@ -304,6 +307,20 @@ class CryptoService:
         nombre_de_page = -(-quantite_de_donnees // quantity)
         liste = liste[(page - 1) * quantity:page * quantity]
 
+        # update price of liste from historique of each crypto
+        for item in liste:
+            if self.check_if_crypto_in_binance != False:
+                break
+            
+            try:
+                async with aiofiles.open(f'app/json/crypto/prix/{item["id"]}_prix.json', 'r', encoding='utf-8') as f:
+                    data = await f.read()
+                data = json.loads(data)
+                if data:
+                    item["current_price"] = data[-1]["price"]
+            except (FileNotFoundError, json.JSONDecodeError):
+                item["current_price"] = 0
+        
         return {
             "quantite_de_donnees": quantite_de_donnees,
             "nombre_de_page": nombre_de_page,
@@ -347,6 +364,7 @@ class CryptoService:
         liste_crypto = await callCoinMarketApi.get_liste_crypto_unfiltered()
         liste_crypto_nofilter = (await self.get_liste_crypto_nofilter(1, 15000))["liste"]
 
+        
         liste_non_maj = []
         for item in liste_crypto_nofilter:
             result = await self.refresh_price_one_crypto(item, liste_crypto)
@@ -446,3 +464,155 @@ class CryptoService:
             raise HTTPException(status_code=404, detail=f"Binance price data for {symbole} not found")
         except json.JSONDecodeError as e:
             raise HTTPException(status_code=500, detail=f"Failed to parse Binance price data: {e}")
+        
+    async def bitcoin_dominace(self,liste_crypto):
+        """Schedule Bitcoin dominance data retrieval."""
+        try:
+            liste = []
+            liste = await self.get_bitcoin_dominace()
+            # Check if the last data is older than 1 day
+            if liste:
+                last_date = datetime.strptime(liste[-1]["date"], "%Y-%m-%d")
+                if (datetime.now() - last_date).days < 1:
+                    return "Bitcoin dominance data is up to date"
+            
+            
+            
+            
+            # get 
+            market_cap_total = 0
+            for crypto in liste_crypto:
+                market_cap_total += crypto.get("market_cap", 0)
+            bitcoin_dominance = 0
+            ethereum_dominance = 0
+            i = 0
+            for crypto in liste_crypto:
+                if i >= 2:
+                    break
+                if crypto.get("id") == "ethereum":
+                    ethereum_dominance = crypto.get("market_cap", 0) / market_cap_total * 100
+                    i += 1
+                if crypto.get("id") == "bitcoin":
+                    bitcoin_dominance = crypto.get("market_cap", 0) / market_cap_total * 100
+                    i += 1
+            
+            
+            other_percentage = 100 - bitcoin_dominance - ethereum_dominance
+            bitcoin_dominance = {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "bitcoin": bitcoin_dominance,
+                "ethereum": ethereum_dominance,
+                "others": other_percentage
+            }
+            
+            liste.append(bitcoin_dominance)
+            # Save to JSON
+            os.makedirs('app/json/crypto/bitcoin_dominance', exist_ok=True)
+            async with aiofiles.open('app/json/crypto/bitcoin_dominance/bitcoin_dominance.json', 'w', encoding='utf-8') as f:
+                await f.write(json.dumps(liste, indent=4, ensure_ascii=False))
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error updating Bitcoin dominance: {str(e)}")
+    
+    async def schedule_bitcoin_dominace(self):
+        """Schedule Bitcoin dominance data retrieval."""
+        try:
+            # get 
+            val =await coinGeckoService.get_liste_crypto_with_weight()
+            return await self.bitcoin_dominace(val)
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error updating Bitcoin dominance: {str(e)}")
+    
+    async def get_bitcoin_dominace(self):
+        """Get Bitcoin dominance data."""
+        try:
+            async with aiofiles.open('app/json/crypto/bitcoin_dominance/bitcoin_dominance.json', 'r', encoding='utf-8') as f:
+                data = await f.read()
+            return json.loads(data)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Bitcoin dominance data not found")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse Bitcoin dominance data: {e}")
+    
+    async def get_bit_coin_dominace_between_2_dates(self, date_start, date_end):
+        """Retrieve Bitcoin dominance data between two dates."""
+        if date_end is None:
+            date_end = datetime.now().strftime("%Y-%m-%d")
+        if date_start is None:
+            raise HTTPException(status_code=400, detail="date_start is required")
+        
+        if date_start > date_end:
+            raise HTTPException(status_code=400, detail="date_start should be less than date_end")
+
+        try:
+            async with aiofiles.open('app/json/crypto/bitcoin_dominance/bitcoin_dominance.json', 'r', encoding='utf-8') as f:
+                data = await f.read()
+            liste = json.loads(data)
+            return [item for item in liste if item["date"] >= date_start and item["date"] <= date_end]
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Bitcoin dominance data not found")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse Bitcoin dominance data: {e}")
+    
+    async def get_liste_crypto_updated(self):
+        
+        try:
+            # get liste crypto updated by binance
+            async with aiofiles.open('app/json/crypto/info/crypto_binance.json', 'r', encoding='utf-8') as f:
+                liste_binace = json.loads(await f.read())
+            # get liste crypto updated by coinGecko and coinMarketCap
+            async with aiofiles.open('app/json/crypto/info/crypto.json', 'r', encoding='utf-8') as f:
+                liste_coinGecko = json.loads(await f.read())
+            
+            liste = liste_binace
+            
+            
+            for item in liste_coinGecko:
+                i =0
+                for item2 in liste_binace:
+                    if item["id"] == item2["id"]:
+                        item2["market_cap"] = item["market_cap"]
+                        item2["volume_24h"] = item["volume_24h"]
+                        # item2["price_change_percentage_24h"] = item["price_change_percentage_24h"]
+                        i+=1
+                        break
+                if i == 0:
+                    liste.append(item)
+            
+            return liste
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Crypto list file not found")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse crypto list: {e}")
+    
+    async def get_liste_crypto_with_weight(self):
+        async with aiofiles.open('app/json/liste_crypto/listeCryptoWithWeight.json', 'r', encoding='utf-8') as f:
+            liste = json.loads(await f.read())
+        
+        async with aiofiles.open('app/json/crypto/info/crypto_binance.json', 'r', encoding='utf-8') as f:
+            liste_binace = json.loads(await f.read())
+        
+        liste_no_filter = await self.get_liste_crypto_nofilter(1,1000)
+        liste_no_filter = liste_no_filter["liste"]
+        
+        for el in liste:
+            i =0
+            for el2 in liste_binace:
+                if el['id'] == el2['id']:
+                    # el['volume_24h'] = el2['volume_24h']
+                    el['current_price'] = el2['current_price']
+                    el['price_change_percentage_24h'] = el2['price_change_percentage_24h']
+                    i+=1
+                    
+            
+            for el2 in liste_no_filter:
+                if el['id'] == el2['id']:
+                    el['volume_24h'] = el2['volume_24h']
+                    if i==0:
+                        el['current_price'] = el2['current_price']
+                    el['price_change_percentage_24h'] = el2['price_change_percentage_24h']
+                    break
+                
+        
+        return liste

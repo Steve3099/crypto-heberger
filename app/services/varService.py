@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import os
 import aiofiles
 from fastapi import HTTPException
+from scipy.stats import gaussian_kde
 
 coinGeckoService = CoinGeckoService()
 cryptoService = CryptoService()
@@ -159,13 +160,21 @@ class VarService:
     async def calculate_var_v2(self, prices_list, crypto_names, percentile=1):
         """Calculate VaR for multiple cryptocurrencies."""
         var_results = {}
-        for i, prices in enumerate(prices_list):
+
+        for i, price_data in enumerate(prices_list):
             crypto_name = crypto_names[i].get("id")
+
+            # Ensure it's a DataFrame
+            prices = pd.DataFrame(price_data)
+
+            # Calculate log return
             prices['log_return'] = np.log(prices['price'] / prices['price'].shift(1))
             prices.dropna(inplace=True)
+
             if len(prices['log_return']) > 1:
                 var_percentile = np.percentile(prices['log_return'], percentile, method='lower')
                 var_results[crypto_name] = var_percentile
+
         return var_results
 
     async def calcul_var_one_crypto(self, id, percentile=1):
@@ -191,7 +200,7 @@ class VarService:
         for el in liste_crypto:
             historique = await coinGeckoService.get_historical_prices(el.get('id'), "usd", 90)
             if len(historique) > 5:
-                historique = historique['price'].iloc[-1]
+                historique = historique[:-2]
                 liste_price.append(historique)
                 liste_crypto_used.append(el)
 
@@ -203,16 +212,19 @@ class VarService:
             data = {"date": today, "var": liste_var[item.get("id")]}
             
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            async with aiofiles.open(file_path, 'r+', encoding='utf-8') as f:
-                try:
-                    data_list = json.loads(await f.read())
-                    if not isinstance(data_list, list):
-                        data_list = [data_list]
-                except (json.JSONDecodeError, FileNotFoundError):
-                    data_list = []
-                data_list.append(data)
-                await f.seek(0)
-                await f.write(json.dumps(data_list, indent=4, ensure_ascii=False))
+            try:
+                async with aiofiles.open(file_path, 'r+', encoding='utf-8') as f:
+                    try:
+                        data_list = json.loads(await f.read())
+                        if not isinstance(data_list, list):
+                            data_list = [data_list]
+                    except (json.JSONDecodeError, FileNotFoundError):
+                        data_list = []
+                    data_list.append(data)
+                    await f.seek(0)
+                    await f.write(json.dumps(data_list, indent=4, ensure_ascii=False))
+            except FileNotFoundError:
+                self.update_var_historique(id=item.get("id"))
 
     async def set_historique_var_crypto(self, id):
         """Set historical VaR data for a cryptocurrency."""
@@ -273,7 +285,6 @@ class VarService:
                     continue
             else:
                 raise HTTPException(status_code=400, detail="Invalid date_fin format")
-            print("here")
             if date_debut > date_fin:
                 raise HTTPException(status_code=400, detail="date_debut must be less than date_fin")
 
@@ -315,21 +326,28 @@ class VarService:
         last_date_dt = datetime.strptime(last_date, date_format)
         today_dt = datetime.strptime(today, date_format)
         delta = (today_dt - last_date_dt).days
-
+        
         if delta > 1:
             liste_prix = await coinGeckoService.get_historical_prices(id, "usd", 90)
-            liste_prix = liste_prix[:-2].iloc[::-1]  # Reverse order
-
+            # Remove the last two entries
+            # liste_prix = liste_prix.iloc[::-1]  # Reverse order
+            
             for i in range(delta - 1):
-                prix_used = liste_prix[i:]
+                prix_used = liste_prix
+                
+                if i != 0:
+                    prix_used = liste_prix[:i]
+                    
                 if len(prix_used) < 3:
                     continue
-                var = await self.calcul_var_with_price(prix_used)
+                # var = await self.calcul_var_with_price(prix_used)
+                var, ret = await self.calculate_var_historical(prix_used)
                 data = {
                     "date": (last_date_dt + timedelta(days=i + 1)).strftime("%Y-%m-%dT00:00:00.000"),
                     "var": var
                 }
                 liste_var.append(data)
+                
 
             file_path = f'app/json/var/historique/{id}_var.json'
             async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
@@ -348,7 +366,6 @@ class VarService:
     async def calculate_var_monte_carlo(self,btc_returns, simulations=100000, percentile=1):
         mu = btc_returns.mean()  # Moyenne des rendements
         sigma = btc_returns.std()  # Écart-type des rendements
-
         # Affichage de mu et sigma
         # print(f"--- Résultats statistiques ---")
         # print(f"Moyenne (mu) des rendements : {mu:.6f}")
@@ -357,3 +374,64 @@ class VarService:
         simulated_returns = np.random.normal(mu, sigma, simulations)
         var_mc = np.percentile(simulated_returns, percentile, method='lower')
         return var_mc, simulated_returns
+    
+    async def get_var(self, crypto_id):
+        # get crypto prices
+        # liste_prix = await coinGeckoService.get_historical_prices(crypto_id, days=90)
+        liste_prix = await cryptoService.get_liste_prix_from_json(crypto_id)
+        
+        # get at most 300 of last data 
+        if len(liste_prix) > 300:
+            liste_prix = liste_prix[-300:]
+            
+        
+        if not liste_prix:
+            raise HTTPException(status_code=404, detail=f"No price data for crypto {crypto_id}")
+        # transform liste_prix to dataframe
+        liste_prix = pd.DataFrame(liste_prix, columns=['date', 'price'])
+        # btc_prices = get_historical_prices(days=90)
+        var_hist, var_coin_returns = await self.calculate_var_historical(liste_prix)
+        # var_mc, simulated_returns = await varService.calculate_var_monte_carlo(var_coin_returns)
+        
+        # print("=== Résultats BTC ===")
+        # print(f"VaR historique (99%) : {var_hist:.4f}")
+        # print(f"VaR Monte Carlo (99%) : {var_mc:.4f}")
+        # return 0
+        # # Graphique Monte Carlo
+        # plt.figure(figsize=(10, 5))
+        # plt.hist(simulated_returns, bins=100, color='skyblue', edgecolor='black')
+        # plt.axvline(var_mc, color='red', linestyle='dashed', linewidth=2, label=f'VaR Monte Carlo 99% = {var_mc:.4f}')
+        # plt.title('Simulation Monte Carlo des rendements BTC (1 jour)')
+        # plt.xlabel('Rendements simulés')
+        # plt.ylabel('Fréquence')
+        # plt.legend()
+        # plt.grid(True)
+        # plt.show()
+        
+        return {
+            "historical_var": float(var_hist),
+            "simulated_returns": list(var_coin_returns) if not isinstance(var_coin_returns, np.ndarray) else var_coin_returns.tolist()
+        }
+
+        return {
+            "historical_var": float(var_hist),
+            "simulated_returns": var_coin_returns.tolist() if isinstance(var_coin_returns, np.ndarray) else var_coin_returns,
+            # "title": 'rendements',
+            # "x_label": 'Rendements simulés',
+            # "y_label": 'Fréquence'
+        }
+    
+    def plot_returns_distribution(self,prices_df, var_value):
+        returns = prices_df['log_return']
+    
+    # Estimation KDE (densité)
+        kde = gaussian_kde(returns)
+        x_vals = np.linspace(returns.min(), returns.max(), 1000)
+        kde_vals = kde(x_vals)
+        
+        return {
+            "kde": kde,
+            "x_vals": x_vals,
+            "kde_vals": kde_vals,
+            "var_value": var_value
+        }

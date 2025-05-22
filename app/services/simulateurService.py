@@ -117,11 +117,14 @@ class SimulateurService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Simulation error: {str(e)}")
     
-    async def simulate_var(self, crypto_id):
+    async def simulate_var(self, crypto_id,quantite=10000):
         # get crypto prices
-        liste_prix = await coinGeckoService.get_historical_prices(crypto_id, days=90)
-        if liste_prix.empty:
+        # liste_prix = await coinGeckoService.get_historical_prices(crypto_id, days=90)
+        liste_prix = await cryptoService.get_liste_prix_from_json(crypto_id)
+        if not liste_prix:
             raise HTTPException(status_code=404, detail=f"No price data for crypto {crypto_id}")
+        
+        liste_prix = pd.DataFrame(liste_prix, columns=['date', 'price'])
         
         # btc_prices = get_historical_prices(days=90)
         var_hist, var_coin_returns = await varService.calculate_var_historical(liste_prix)
@@ -163,10 +166,13 @@ class SimulateurService:
         price = liste_prix['price'].iloc[-1]
         
         notional = quantite * price
-        
+        # return liste_prix
+        # make quentit into integer
+        quantite = int(quantite)
         
         # btc_prices = get_historical_prices(days=90)
         var_hist, var_coin_returns = await varService.calculate_var_historical(liste_prix)
+        
         var_mc, simulated_returns = await varService.calculate_var_monte_carlo(var_coin_returns)
         
         # print("=== Résultats BTC ===")

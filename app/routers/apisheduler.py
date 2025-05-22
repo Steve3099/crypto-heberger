@@ -84,18 +84,19 @@ async def update_volatilite_for_ecah_crypto():
 #     return {"message":"action done"}
 @apisheduler.get('/sheduler/action')
 async def action():
-    async def run_all():
-        await set_fear_and_greed()
-        await set_liste_prix()
-        await set_market_cap()
-        await update_volatilite_generale()
-        await update_volatilite_for_ecah_crypto()
-        await set_liste_crypto_with_weight()
-        await set_var()
-        await set_info_crypto()
+    # async def run_all():
+    await set_fear_and_greed()
+    await set_liste_prix()
+    await set_market_cap()
+    await update_volatilite_generale()
+    await update_volatilite_for_ecah_crypto()
+    await set_liste_crypto_with_weight()
+    await set_var()
+    await set_info_crypto()
+    await bitcoin_dominance()
 
-    asyncio.create_task(run_all())
-    return {"message": "tasks running in background"}
+    # asyncio.create_task(run_all())
+    return {"message": "action done"}
 
 @apisheduler.get('/sheduler/set_info_crypto')
 async def set_info_crypto():
@@ -205,3 +206,8 @@ async def set_index_between_dates(start_date, end_date):
 @apisheduler.get('/sheduler/getliste_crypto_for_volatility')
 async def getliste_crypto_for_volatility():
     return await coinGeckoService.get_liste_crypto_filtered()
+
+@apisheduler.get('/sheduler/bitcoin_dominance')
+async def bitcoin_dominance():
+    # get liste crypto with weght
+    return await cryptoService.schedule_bitcoin_dominace()

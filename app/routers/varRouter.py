@@ -16,6 +16,6 @@ async def update_var_historique(id):
     return {"message":"var"}
 
 @varrouter.get("/{id}/var/historique")
-async def get_var_historique(id,date_debut,date_fin = None):
-    
+async def get_var_historique(id):
+    return await varService.get_var(id)
     return await varService.get_var_historique_one_crypto(id,date_debut,date_fin)

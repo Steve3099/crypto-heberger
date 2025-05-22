@@ -9,12 +9,14 @@ import numpy as np
 import time
 from app.services.callCoinMarketApi import CallCoinMarketApi
 from app.services.calculService import CalculService
+# from app.services.cryptoService import CryptoService
 from fastapi import HTTPException
 import os
 from pathlib import Path
 
 coinMarketApi = CallCoinMarketApi()
 calculService = CalculService()
+# cryptoService = CryptoService()
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -214,46 +216,51 @@ class CoinGeckoService:
         return retour
 
     async def set_historical_price_to_json(self, crypto, vs_currency='usd', days=90):
-        url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
-        params = {
-            'vs_currency': vs_currency,
-            'days': days,
-            'interval': 'daily',
-        }
-        headers = {
-            "accept": "application/json",
-            "x-cg-demo-api-key": key,
-        }
+        try:
+            url = f'https://api.coingecko.com/api/v3/coins/{crypto}/market_chart'
+            params = {
+                'vs_currency': vs_currency,
+                'days': days,
+                'interval': 'daily',
+            }
+            headers = {
+                "accept": "application/json",
+                "x-cg-demo-api-key": key,
+            }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, params=params) as response:
-                response.raise_for_status()
-                data = await response.json()
-        
-        prices = data['prices']
-        market_caps = data['market_caps']
-        volumes = data['total_volumes']
-        
-        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
-        df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df['price'] = df['price']
-        
-        lf = pd.DataFrame(market_caps, columns=['timestamp', 'market_cap'])
-        lf['date'] = pd.to_datetime(lf['timestamp'], unit='ms')
-        lf['market_cap'] = lf['market_cap'].round(2)
-        
-        volume = pd.DataFrame(volumes, columns=['timestamp', 'volume'])
-        volume['date'] = pd.to_datetime(volume['timestamp'], unit='ms')
-        volume['volume'] = volume['volume'].round(2)
-        
-        async with aiofiles.open(f'app/historique_prix_json/{crypto}_historique.json', 'w') as f:
-            await f.write(df.to_json(date_format="iso", orient="records", indent=4))
-        
-        async with aiofiles.open(f'app/json/crypto/market_cap/{crypto}_market_cap.json', 'w') as f:
-            await f.write(lf.to_json(date_format="iso", orient="records", indent=4))
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, params=params) as response:
+                    response.raise_for_status()
+                    data = await response.json()
             
-        async with aiofiles.open(f'app/json/crypto/volume/{crypto}_volume.json', 'w') as f:
-            await f.write(volume.to_json(date_format="iso", orient="records", indent=4))
+            prices = data['prices']
+            market_caps = data['market_caps']
+            volumes = data['total_volumes']
+            
+            df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+            df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+            df['price'] = df['price']
+            
+            lf = pd.DataFrame(market_caps, columns=['timestamp', 'market_cap'])
+            lf['date'] = pd.to_datetime(lf['timestamp'], unit='ms')
+            lf['market_cap'] = lf['market_cap']
+            
+            volume = pd.DataFrame(volumes, columns=['timestamp', 'volume'])
+            volume['date'] = pd.to_datetime(volume['timestamp'], unit='ms')
+            volume['volume'] = volume['volume']
+            
+            async with aiofiles.open(f'app/historique_prix_json/{crypto}_historique.json', 'w') as f:
+                await f.write(df.to_json(date_format="iso", orient="records", indent=4))
+            
+            async with aiofiles.open(f'app/json/crypto/market_cap/{crypto}_market_cap.json', 'w') as f:
+                await f.write(lf.to_json(date_format="iso", orient="records", indent=4))
+                
+            async with aiofiles.open(f'app/json/crypto/volume/{crypto}_volume.json', 'w') as f:
+                await f.write(volume.to_json(date_format="iso", orient="records", indent=4))
+        except Exception as e:
+            # sleep time(5)
+            await asyncio.sleep(60)
+            await self.set_historical_price_to_json(crypto, vs_currency, days)
 
     async def set_market_cap_to_json(self, crypto):
         url = f'https://api.coingecko.com/api/v3/coins/{crypto}'
@@ -344,11 +351,23 @@ class CoinGeckoService:
         liste_no_filter = await self.get_liste_crypto_nofilter()
         
         for el in liste:
+            
             for el2 in liste_no_filter:
                 if el['id'] == el2['id']:
+                    
                     el['volume_24h'] = el2['volume_24h']
                     el['current_price'] = el2['current_price']
-                    break
+                    # el['current_price'] = el2['current_price']
+                    el['price_change_percentage_24h'] = el2['price_change_percentage_24h']
+                    # try:
+                    #     liste_binance = await cryptoService.get_liste_price_binance_from_json(id)
+                    #     laste_price = liste_binance.tail(1)
+                    #     price = laste_price.iloc[0]['price']
+                    #     el['current_price'] = price
+                    # except Exception as e:
+                    #     price = el2['current_price']
+                    
+                    # break
         
         return liste
 

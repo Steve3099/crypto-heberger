@@ -218,6 +218,7 @@ class VolatiliteService:
 
         if difference >= 2:
             historique = await coinGeckoService.get_historical_prices(id, "usd", 90)
+            historique = historique[:-2]
             listeVolatilite = []
             for i in range(difference - 1):
                 price = historique if i == 0 else historique[:-i]
@@ -249,7 +250,9 @@ class VolatiliteService:
             historique = await coinGeckoService.get_historical_prices(el.get('id'), vs_currency, 90)
             if len(historique) <= 90:
                 continue
-            historique = historique['price'].iloc[-1]
+            # take price befor today
+            historique = historique[:-2]
+            # historique = historique['price'].iloc[-1]
             file_path = f'app/json/volatilite/{el.get("id")}_volatilite.json'
             os.makedirs('app/json/volatilite', exist_ok=True)
             
