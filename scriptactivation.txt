@@ -1,2 +1,25 @@
 venv\Scripts\activate
 uvicorn app.main:app --reload
+
+ssh root@82.112.255.67
+helloFromMinecraft2#
+
+pip freeze > requirements.txt
+pip install -r requirements.txt
+
+cd crypto_python_api/
+sudo lsof -i :8000
+
+sudo kill -9 5158
+
+source venv/bin/activate 
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > test.log 2>&1
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' > test.log
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' > test.log
+ping -c 4 google.com
+
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level warning 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' > test.log

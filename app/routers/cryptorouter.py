@@ -79,7 +79,7 @@ async def getFearAndGreed():
 @cryptorouter.get("/listeCryptoVolatilite")    
 async def getListeCryptoAvecVolatilite():
     listeCrypto = await getListe()
-    listeVolatilite = calculService.top5volatiliteJournaliere(listeCrypto)
+    listeVolatilite = await calculService.top5volatiliteJournaliere(listeCrypto)
     return listeVolatilite
     
 
@@ -96,7 +96,7 @@ async def getTop5Corissance():
 
 @cryptorouter.get("/weights")  
 async def getListeCryptoAvecPoids():
-    val =await coinGeckoService.get_liste_crypto_with_weight()
+    val =await cryptoService.get_liste_crypto_with_weight()
     #  order val by weight descending
     val.sort(key=lambda x: x.get("weight",0),reverse=True)
     
@@ -106,12 +106,12 @@ async def getListeCryptoAvecPoids():
 @cryptorouter.get("/GraphWeights")  
 async def getGraphPoids():
     listeCrypto = await getListeCryptoAvecPoids()
-    return coinGeckoService.getGraphWeight(listeCrypto)
+    return await coinGeckoService.getGraphWeight(listeCrypto)
 
 @cryptorouter.get("/Comparaison")  
 async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_currency = "USD",days= 90):
-    listeCrypto = await getListe()
-    
+    # listeCrypto = await getListe()
+    listeCrypto = await coinGeckoService.get_liste_crypto_with_weight()
     liste_crypto = ['','']
     for crypto in listeCrypto:
         if crypto.get("id") == crypto1Id:
@@ -129,12 +129,12 @@ async def comparer2Crypto(crypto1Id = "bitcoin",crypto2Id = "ethereum",vs_curren
         market_cap = await coinGeckoService.get_market_cap(el.get("id"))
         liste_market_cap.append(market_cap)
         
-    liste_weight = calculService.normalize_weights(liste_market_cap)
-    liste_weight = calculService.round_weights(liste_weight)
+    liste_weight = await calculService.normalize_weights(liste_market_cap)
+    liste_weight = await calculService.round_weights(liste_weight)
     
     
-    liste_volatilite, portfolio_volatility_mat,covariance_matrix = calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
-    correlation_matrix = calculService.calculate_correlation_matrix(covariance_matrix)
+    liste_volatilite, portfolio_volatility_mat,covariance_matrix = await calculService.calculate_statistics(liste_prix,liste_crypto,liste_weight)
+    correlation_matrix = await calculService.calculate_correlation_matrix(covariance_matrix)
     retour = {
         "matricecorrelation": correlation_matrix,
     }
@@ -157,7 +157,8 @@ async def grapheIndex(date_start="2025-02-18 09:19:33", date_end=None):
     return await indexService.get_liste_index_from_json_file(date_start, date_end)
 
 @cryptorouter.get("/liste/nofilter")
-async def getListeNoFilter(page: int = 1, quantity: int  = 50):
+async def getListeNoFilter(search: str = None,page: int = 1, quantity: int  = 50):
+    return await cryptoService.search_crypto_by_text(search,page,quantity)
     temp = await cryptoService.get_liste_crypto_nofilter(page,quantity)
     return temp
 
@@ -170,7 +171,7 @@ async def get_priceRange(id: str,date_start,date_end):
     return await cryptoService.get_price_range(id,date_start,date_end)
 
 @cryptorouter.get("/{id}/price/historique")
-async def get_historique_price(id: str,date_start,date_end):
+async def get_historique_price(id: str,date_start,date_end = None):
     return await cryptoService.get_liste_prix_between_2_dates(id,date_start,date_end)
 
 @cryptorouter.get("/{id}/set_price")
@@ -192,3 +193,28 @@ async def get_historique_market_cap_generale(date_start="2024-11-25T00:00:00.000
 @cryptorouter.get("/{id}/skewness_kurtosis")
 async def get_skewness_kurtosis(id: str):
     return await skewness_KurtoService.get_skewness_kurtosis(id)
+
+@cryptorouter.get("/search")
+async def search_crypto(search: str,page: int = 1,quantity: int = 50):
+    return await cryptoService.search_crypto_by_text(search,page,quantity)
+
+@cryptorouter.get("/global_data")
+async def get_global_data():
+    return await coinGeckoService.get_global_data_from_json()
+
+
+@cryptorouter.get("/bitcoin_dominance")
+async def get_bitcoin_dominance(date_start="2024-05-16", date_end=None):
+    try:
+        bitcoin_dominance = await cryptoService.get_bit_coin_dominace_between_2_dates(date_start, date_end)
+        return bitcoin_dominance
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching Bitcoin dominance: {str(e)}")
+
+@cryptorouter.get("/crypto/liste")
+async def get_liste_crypto():
+    try:
+        liste = await cryptoService.get_liste_crypto_updated()
+        return liste
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching crypto list: {str(e)}")

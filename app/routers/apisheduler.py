@@ -6,6 +6,9 @@ from app.services.voaltiliteService import VolatiliteService
 from app.services.cryptoService import CryptoService
 from app.services.skeuness_kurtoService import Skewness_KurtoService
 from app.services.callCoinMarketApi import CallCoinMarketApi
+from app.services.binanceService import BinanceService
+
+import asyncio
 
 apisheduler = APIRouter()
 indexService = IndexService()
@@ -15,6 +18,7 @@ varService = VarService()
 cryptoService = CryptoService()
 skewness_kurtoService = Skewness_KurtoService()
 callCoinMArketApi = CallCoinMarketApi()
+binanceSerice = BinanceService()
 
 @apisheduler.get("/sheduler/listeprix")
 async def set_liste_prix():
@@ -33,7 +37,7 @@ async def set_index():
 
 @apisheduler.get("/sheduler/listecryptowithweight")
 async def set_liste_crypto_with_weight():
-    await coinGeckoService.schedule_liste_crypto_with_weight_volatility()
+    return await coinGeckoService.schedule_liste_crypto_with_weight_volatility()
     return {"message":"liste crypto with weight done"}
 
 @apisheduler.get('/sheduler/volatilite')
@@ -66,18 +70,33 @@ async def update_volatilite_for_ecah_crypto():
 #     await varService.set_Var_for_each_crypto()
 #     return {"message":"var done"}
 
+# @apisheduler.get('/sheduler/action')
+# async def action():
+#     await set_fear_and_greed()
+#     await set_liste_prix()
+#     await set_market_cap()
+#     await update_volatilite_generale()
+#     await update_volatilite_for_ecah_crypto()
+#     # await set_liste_sans_filtre()
+#     await set_liste_crypto_with_weight()
+#     await set_var()
+#     # await set_volatilite_crypto()
+#     return {"message":"action done"}
 @apisheduler.get('/sheduler/action')
 async def action():
+    # async def run_all():
     await set_fear_and_greed()
     await set_liste_prix()
     await set_market_cap()
     await update_volatilite_generale()
     await update_volatilite_for_ecah_crypto()
-    # await set_liste_sans_filtre()
     await set_liste_crypto_with_weight()
     await set_var()
-    await cryptoService.set_info_crypto()
-    return {"message":"action done"}
+    await set_info_crypto()
+    await bitcoin_dominance()
+
+    # asyncio.create_task(run_all())
+    return {"message": "action done"}
 
 @apisheduler.get('/sheduler/set_info_crypto')
 async def set_info_crypto():
@@ -111,7 +130,7 @@ async def set_historique_volatilite_for_one_crypto(id):
 async def set_historique_prix_for_one_crypto(id):
     ids = [id]
     for id in ids:
-        await coinGeckoService.set_historical_price_to_json(id)
+        return await coinGeckoService.set_historical_price_to_json(id)
     # return await coinGeckoService.set_historical_price_to_json(id)
     # return {"message":"var done"}
     
@@ -133,3 +152,62 @@ async def get_list_cryptos():
 async def set_fear_and_greed():
     await callCoinMArketApi.getFearAndGreed()
     return "fear and greed done"
+
+@apisheduler.get('/sheduler/set_historique_var_crypto')
+async def set_historique_var_crypto(id):
+    return await varService.set_historique_var_crypto(id)
+    # return {"message":"var done"}
+    
+# set_historique_volume_generale
+@apisheduler.get('/sheduler/set_historique_volume_generale')
+async def set_historique_volume_generale():
+    return await cryptoService.set_historique_volume_generale()
+    # return {"message":"var done"}
+
+#set stabel and wrapped coin
+@apisheduler.get('/sheduler/set_stable_and_wrapped_coin')
+async def set_stable_and_wrapped_coin():
+    await callCoinMArketApi.set_liste_stabke_wrapped_tokens()
+    return {"message":"stable and wrapped coins done"}
+
+# set volume generale historique
+@apisheduler.get('/sheduler/set_volume_generale_historique')
+async def set_volume_generale_historique():
+    await cryptoService.set_historique_volume_generale()
+    return {"message":"volume generale done"}
+
+#set_global_data_to_json
+@apisheduler.get('/sheduler/set_global_data_to_json')
+async def set_global_data_to_json():
+    return await coinGeckoService.set_global_data_to_json()
+    return {"message":"global data done"}
+
+# refresh price crypto
+@apisheduler.get('/sheduler/refresh_price_crypto')
+async def refresh_price_crypto():
+    await cryptoService.refresh_price_crypto()
+    return {"message":"refresh price crypto done"}
+
+@apisheduler.get('/sheduler/get_binance_id')
+async def get_binance_id():
+    return await binanceSerice.get_binance_symbols()
+    # return {"message":"refresh price crypto done"}
+
+@apisheduler.get('/sheduler/get_crypto_coin_gecko_correled_with_binance')
+async def get_crypto_coin_gecko_correled_with_binance():
+    return await cryptoService.set_crypto_coin_gecko_correled_with_binance()
+    # return {"message":"refresh price crypto done"}
+    
+@apisheduler.get('/sheduler/set_index_between_dates')
+async def set_index_between_dates(start_date, end_date):
+    return await indexService.generate_index_between_dates(start_date, end_date)
+    return {"message":"index between dates done"}
+
+@apisheduler.get('/sheduler/getliste_crypto_for_volatility')
+async def getliste_crypto_for_volatility():
+    return await coinGeckoService.get_liste_crypto_filtered()
+
+@apisheduler.get('/sheduler/bitcoin_dominance')
+async def bitcoin_dominance():
+    # get liste crypto with weght
+    return await cryptoService.schedule_bitcoin_dominace()

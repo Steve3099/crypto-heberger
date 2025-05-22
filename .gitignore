@@ -18,3 +18,9 @@ listemarketcap.csv
 stablecoins.csv
 circulating_supply.csv
 app/.env
+*.json
+scriptactivation.txt
+*.json
+scriptactivation.txt
+*.csv
+/Test
